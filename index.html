@@ -1,0 +1,1296 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skello - Simulateur de prix</title>
+    <style>
+        /* ═══════════════════════════════════════════════
+           SKELLO BRAND FONT — Gellix
+        ═══════════════════════════════════════════════ */
+        @font-face {
+            font-family: 'Skello';
+            src: url('fonts/Gellix-Medium.woff') format('woff');
+            font-weight: 100 900;
+            font-style: normal;
+            font-display: swap;
+        }
+        :root {
+            --blue: #2B66FE;
+            --blue-light: #D9E6FF;
+            --blue-dark: #1A4FD6;
+            --blue-glow: rgba(43,102,254,0.15);
+            --indigo: #2E26F2;
+            --sky: #50A5FF;
+            --black: #0F172A;
+            --g900: #1E293B;
+            --g700: #334155;
+            --g600: #475569;
+            --g500: #64748B;
+            --g400: #94A3B8;
+            --g300: #CBD5E1;
+            --g200: #E2E8F0;
+            --g100: #F1F5F9;
+            --g50: #F8FAFC;
+            --white: #FFFFFF;
+            --green: #10B981;
+            --green-light: #D1FAE5;
+            --green-dark: #059669;
+            --r-sm: 8px;
+            --r-md: 12px;
+            --r-lg: 16px;
+            --r-xl: 20px;
+            --r-2xl: 24px;
+            --r-pill: 100px;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.04);
+            --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.08), 0 8px 10px -6px rgba(0,0,0,0.04);
+            --shadow-glow: 0 0 40px rgba(43,102,254,0.12);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Skello', Verdana, sans-serif; background: var(--g50); color: var(--black); line-height: 1.5; min-height: 100vh; -webkit-font-smoothing: antialiased; }
+
+        /* ═══════════════════════════════════════════════
+           ANIMATED MESH BACKGROUND
+        ═══════════════════════════════════════════════ */
+        .bg-mesh {
+            position: fixed; inset: 0; z-index: -1; overflow: hidden;
+            background: linear-gradient(135deg, #F8FAFC 0%, #EEF2FF 25%, #F0F5FF 50%, #F8FAFC 100%);
+        }
+        .bg-mesh::before {
+            content: ''; position: absolute; width: 600px; height: 600px; top: -200px; right: -100px;
+            background: radial-gradient(circle, rgba(43,102,254,0.07) 0%, transparent 70%);
+            animation: float1 20s ease-in-out infinite;
+        }
+        .bg-mesh::after {
+            content: ''; position: absolute; width: 500px; height: 500px; bottom: -150px; left: -100px;
+            background: radial-gradient(circle, rgba(80,165,255,0.06) 0%, transparent 70%);
+            animation: float2 25s ease-in-out infinite;
+        }
+        @keyframes float1 { 0%,100%{transform:translate(0,0)} 33%{transform:translate(-40px,30px)} 66%{transform:translate(30px,-20px)} }
+        @keyframes float2 { 0%,100%{transform:translate(0,0)} 33%{transform:translate(30px,-40px)} 66%{transform:translate(-20px,30px)} }
+
+        /* ═══════════════════════════════════════════════
+           HEADER — Glassmorphism
+        ═══════════════════════════════════════════════ */
+        .header {
+            background: rgba(255,255,255,0.72);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(226,232,240,0.6);
+            padding: 12px 32px; display: flex; align-items: center; justify-content: space-between;
+            position: sticky; top: 0; z-index: 100;
+            transition: box-shadow 0.3s;
+        }
+        .header.scrolled { box-shadow: 0 4px 30px rgba(0,0,0,0.06); }
+        .header-left { display: flex; align-items: center; gap: 14px; }
+        .logo-svg { height: 28px; width: auto; }
+.lang-selector { display: flex; gap: 2px; background: var(--g100); border-radius: var(--r-pill); padding: 3px; }
+        .lang-btn {
+            border: none; background: transparent; padding: 6px 14px; border-radius: var(--r-pill);
+            cursor: pointer; font-size: 12px; font-weight: 600; color: var(--g500);
+            transition: all 0.25s cubic-bezier(0.4,0,0.2,1); position: relative;
+        }
+        .lang-btn:hover { color: var(--g700); }
+        .lang-btn.active { background: var(--white); color: var(--blue); box-shadow: var(--shadow-sm); }
+
+        /* ═══════════════════════════════════════════════
+           AUTH GATE
+        ═══════════════════════════════════════════════ */
+        .auth-gate {
+            position: fixed; inset: 0; z-index: 9999;
+            display: flex; align-items: center; justify-content: center;
+            background: linear-gradient(135deg, #F8FAFC 0%, #EEF2FF 25%, #F0F5FF 50%, #F8FAFC 100%);
+        }
+        .auth-gate.hidden { display: none; }
+        .auth-card {
+            background: var(--white);
+            border-radius: var(--r-2xl);
+            box-shadow: var(--shadow-xl), 0 0 60px rgba(43,102,254,0.08);
+            padding: 48px 44px;
+            text-align: center;
+            max-width: 400px; width: 90%;
+            animation: authIn 0.4s cubic-bezier(0.4,0,0.2,1);
+        }
+        @keyframes authIn { from { opacity: 0; transform: translateY(16px) scale(0.97); } to { opacity: 1; transform: none; } }
+        .auth-logo { height: 36px; margin-bottom: 28px; }
+        .auth-title { font-size: 22px; font-weight: 800; color: var(--g900); margin-bottom: 6px; letter-spacing: -0.3px; }
+        .auth-sub { font-size: 14px; color: var(--g500); margin-bottom: 32px; line-height: 1.5; }
+        .auth-google-btn {
+            display: inline-flex; align-items: center; gap: 10px;
+            background: var(--white); border: 1.5px solid var(--g200);
+            border-radius: var(--r-md); padding: 12px 28px;
+            font-size: 14px; font-weight: 600; color: var(--g700);
+            cursor: pointer; transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
+            font-family: inherit;
+        }
+        .auth-google-btn:hover { border-color: var(--g300); box-shadow: var(--shadow-md); }
+        .auth-error {
+            display: none; margin-top: 16px; padding: 10px 16px;
+            background: #FEF2F2; border: 1px solid #FECACA; border-radius: var(--r-md);
+            color: #DC2626; font-size: 12px; font-weight: 600;
+        }
+        .auth-domain { font-size: 11px; color: var(--g400); margin-top: 24px; }
+
+        /* USER INFO IN HEADER */
+        .user-info { display: flex; align-items: center; gap: 10px; }
+        .user-avatar {
+            width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--blue-light);
+        }
+        .user-name { font-size: 12px; font-weight: 600; color: var(--g600); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .logout-btn {
+            border: none; background: var(--g100); color: var(--g500);
+            padding: 6px 12px; border-radius: var(--r-pill);
+            font-size: 11px; font-weight: 600; cursor: pointer;
+            transition: all 0.2s; font-family: inherit;
+        }
+        .logout-btn:hover { background: var(--g200); color: var(--g700); }
+
+        /* ═══════════════════════════════════════════════
+           HERO TITLE
+        ═══════════════════════════════════════════════ */
+        .main { max-width: 980px; margin: 0 auto; padding: 40px 24px 80px; position: relative; }
+        .hero { text-align: center; margin-bottom: 40px; }
+        .hero h1 {
+            font-size: 36px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 8px;
+            background: linear-gradient(135deg, var(--black) 0%, var(--g700) 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .hero h1 .accent {
+            background: linear-gradient(135deg, var(--indigo) 0%, var(--sky) 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .hero p { color: var(--g500); font-size: 16px; font-weight: 400; }
+
+        /* ═══════════════════════════════════════════════
+           CONFIGURATION CARD — Glassmorphism
+        ═══════════════════════════════════════════════ */
+        .card {
+            background: rgba(255,255,255,0.85);
+            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            border-radius: var(--r-2xl); border: 1px solid rgba(226,232,240,0.7);
+            box-shadow: var(--shadow-lg);
+            padding: 32px; margin-bottom: 28px;
+            transition: box-shadow 0.3s;
+        }
+        .card:hover { box-shadow: var(--shadow-xl); }
+        .card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; padding-bottom: 20px; border-bottom: 1px solid var(--g200); }
+        .card-header .icon {
+            width: 40px; height: 40px;
+            background: linear-gradient(135deg, #EEF2FF, var(--blue-light));
+            border-radius: var(--r-md); display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 8px rgba(43,102,254,0.1);
+        }
+        .card-header h2 { font-size: 18px; font-weight: 700; color: var(--g900); letter-spacing: -0.2px; }
+
+        /* FORM GRID */
+        .form-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+        .form-group { display: flex; flex-direction: column; gap: 8px; }
+        .form-label { font-size: 11px; font-weight: 700; color: var(--g500); text-transform: uppercase; letter-spacing: 0.8px; }
+        .form-select, .form-input {
+            padding: 11px 16px; border: 1.5px solid var(--g200); border-radius: var(--r-md);
+            font-size: 14px; font-weight: 500; color: var(--black); background: var(--white);
+            transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
+            font-family: inherit;
+        }
+        .form-select {
+            appearance: none; cursor: pointer;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%2394A3B8' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat; background-position: right 14px center; padding-right: 40px;
+        }
+        .form-select:hover, .form-input:hover { border-color: var(--g300); }
+        .form-select:focus, .form-input:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 4px var(--blue-glow); }
+
+        /* ═══════════════════════════════════════════════
+           PILL SELECTOR — Skello Design System
+        ═══════════════════════════════════════════════ */
+        .pill-group { display: flex; flex-wrap: wrap; gap: 8px; }
+        .pill {
+            border-radius: 18px;
+            border: 1px solid #DDD;
+            background: #FFF;
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--g700);
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
+            font-family: inherit;
+            user-select: none;
+            white-space: nowrap;
+        }
+        .pill:hover {
+            border-color: var(--g300);
+            background: var(--g50);
+        }
+        .pill.active {
+            border-radius: 18px;
+            background: #D9E6FF;
+            border-color: transparent;
+            color: var(--blue-dark);
+            font-weight: 600;
+        }
+        .pill:active {
+            transform: scale(0.95);
+        }
+        .pill.active:hover {
+            background: #CDDCFA;
+        }
+        .pill:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 3px var(--blue-glow);
+        }
+
+        /* STEPPER */
+        .stepper {
+            display: flex; align-items: center; border: 1.5px solid var(--g200); border-radius: var(--r-md);
+            overflow: hidden; transition: all 0.25s; background: var(--white); width: 100%;
+        }
+        .stepper:hover { border-color: var(--g300); }
+        .stepper:focus-within { border-color: var(--blue); box-shadow: 0 0 0 4px var(--blue-glow); }
+        .stepper input { border: none; text-align: center; font-size: 15px; font-weight: 600; flex: 1; min-width: 0; padding: 11px 0; color: var(--black); font-family: inherit; }
+        .stepper input:focus { outline: none; }
+        .stepper-btn {
+            border: none; background: var(--g50); width: 44px; min-width: 44px; flex-shrink: 0; height: 44px; cursor: pointer;
+            font-size: 16px; color: var(--g500); display: flex; align-items: center; justify-content: center;
+            transition: all 0.15s;
+        }
+        .stepper-btn:hover { background: var(--g100); color: var(--blue); }
+        .stepper-btn:active { background: var(--blue-light); }
+
+        /* SLIDER */
+        .slider-group { grid-column: 1 / 3; padding-top: 8px; }
+        .slider-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+        .slider-header .form-label { margin: 0; }
+        .slider-value {
+            font-size: 24px; font-weight: 800; min-width: 60px; text-align: right;
+            background: linear-gradient(135deg, var(--indigo), var(--sky));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+            cursor: pointer; position: relative;
+        }
+        .slider-value:hover { opacity: 0.8; }
+        .slider-value-input {
+            font-size: 24px; font-weight: 800; width: 90px; text-align: right;
+            background: linear-gradient(135deg, var(--indigo), var(--sky));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+            border: none; border-bottom: 2px solid var(--blue); outline: none;
+            font-family: inherit; padding: 0;
+        }
+        .slider-wrap { position: relative; width: 100%; height: 28px; display: flex; align-items: center; }
+        .slider-wrap input[type="range"] {
+            -webkit-appearance: none; appearance: none;
+            width: 100%; height: 6px; border-radius: 6px;
+            background: var(--g200); outline: none; cursor: pointer; margin: 0;
+        }
+        .slider-wrap input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            width: 24px; height: 24px; border-radius: 50%;
+            background: var(--white);
+            border: 3px solid var(--blue);
+            box-shadow: 0 2px 8px rgba(43,102,254,0.25);
+            cursor: pointer; margin-top: -9px;
+            transition: box-shadow 0.2s, transform 0.15s;
+        }
+        .slider-wrap input[type="range"]::-webkit-slider-thumb:hover {
+            box-shadow: 0 2px 12px rgba(43,102,254,0.4);
+            transform: scale(1.1);
+        }
+        .slider-wrap input[type="range"]::-webkit-slider-thumb:active {
+            transform: scale(0.95);
+        }
+        .slider-wrap input[type="range"]::-webkit-slider-runnable-track { height: 6px; border-radius: 6px; }
+        .slider-wrap input[type="range"]::-moz-range-thumb {
+            width: 24px; height: 24px; border-radius: 50%;
+            background: var(--white); border: 3px solid var(--blue);
+            box-shadow: 0 2px 8px rgba(43,102,254,0.25); cursor: pointer;
+        }
+        .slider-wrap input[type="range"]::-moz-range-track { height: 6px; border-radius: 6px; background: var(--g200); }
+
+        /* DISCOUNT INPUT IN RESULT CARD */
+        .discount-input-row { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+        /* Original price (strikethrough) */
+        .val-original { font-size: 13px; font-weight: 500; color: var(--g400); text-decoration: line-through; margin-top: 4px; min-height: 20px; }
+        .discount-wrap { position: relative; width: 110px; }
+        .discount-wrap input {
+            width: 100%; padding: 10px 32px 10px 16px; border: 1.5px solid var(--g200); border-radius: var(--r-md);
+            font-size: 14px; font-weight: 600; font-family: inherit; transition: all 0.25s;
+        }
+        .discount-wrap input:hover { border-color: var(--g300); }
+        .discount-wrap input:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 4px var(--blue-glow); }
+        .discount-wrap .sfx { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); font-size: 13px; color: var(--g400); font-weight: 600; }
+
+        /* ═══════════════════════════════════════════════
+           RESULT CARD — Hero Section
+        ═══════════════════════════════════════════════ */
+        .result {
+            background: var(--white); border-radius: var(--r-2xl);
+            box-shadow: var(--shadow-xl), var(--shadow-glow);
+            border: 1px solid rgba(43,102,254,0.08);
+            overflow: hidden; position: relative;
+        }
+        .result::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+            background: linear-gradient(90deg, var(--indigo), var(--blue), var(--sky));
+        }
+        .result-head {
+            background: linear-gradient(135deg, var(--indigo) 0%, var(--blue) 50%, var(--sky) 100%);
+            padding: 20px 32px; color: var(--white); display: flex; align-items: center; gap: 12px;
+            position: relative; overflow: hidden;
+        }
+        .result-head::after {
+            content: ''; position: absolute; top: -50%; right: -20%; width: 200px; height: 200px;
+            background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+        .result-head h2 { font-size: 17px; font-weight: 700; letter-spacing: -0.2px; position: relative; z-index: 1; }
+        .result-body { padding: 32px; }
+
+        /* RESULT GRID — Cards with subtle gradient */
+        .result-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+        .result-item {
+            background: linear-gradient(135deg, var(--g50) 0%, var(--white) 100%);
+            border: 1px solid var(--g200);
+            border-radius: var(--r-lg); padding: 20px; text-align: center;
+            transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+        }
+        .result-item:hover { border-color: var(--blue-light); box-shadow: 0 4px 12px rgba(43,102,254,0.06); transform: translateY(-1px); }
+        .result-item .lbl { font-size: 10px; font-weight: 700; color: var(--g500); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+        .result-item .val { font-size: 26px; font-weight: 800; color: var(--g900); letter-spacing: -0.5px; }
+        .result-item .val .cur { font-size: 14px; font-weight: 500; color: var(--g400); }
+
+        /* DISCOUNT BADGE */
+        .discount-badge {
+            display: none; align-items: center; gap: 6px;
+            background: var(--green-light); color: var(--green-dark);
+            font-size: 12px; font-weight: 600; padding: 8px 16px;
+            border-radius: var(--r-pill); margin-bottom: 20px; width: fit-content;
+            border: 1px solid rgba(16,185,129,0.15);
+        }
+        .discount-badge.vis { display: inline-flex; }
+
+        .divider { border: none; border-top: 1px solid var(--g100); margin: 24px 0; }
+
+        /* TOTAL BOX — Big moment */
+        .total-box {
+            display: flex; align-items: center; justify-content: space-between;
+            background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 30%, #DBEAFE 100%);
+            border-radius: var(--r-xl); padding: 24px 28px;
+            border: 1px solid rgba(43,102,254,0.08);
+            position: relative; overflow: hidden;
+        }
+        .total-box::before {
+            content: ''; position: absolute; inset: 0;
+            background: radial-gradient(ellipse at top right, rgba(80,165,255,0.08) 0%, transparent 60%);
+        }
+        .total-box .t-label { font-size: 15px; font-weight: 600; color: var(--g900); position: relative; }
+        .total-box .t-label small { display: block; font-size: 12px; color: var(--g500); font-weight: 400; margin-top: 3px; }
+        .total-box .t-right { text-align: right; position: relative; z-index: 1; }
+        .total-box .t-value {
+            font-size: 42px; font-weight: 800; letter-spacing: -1px;
+            background: linear-gradient(135deg, var(--indigo), var(--blue));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .total-box .t-value .per { font-size: 16px; font-weight: 500; -webkit-text-fill-color: var(--g500); }
+
+        /* SECONDARY INFO */
+        .secondary {
+            display: flex; justify-content: flex-end; gap: 24px; margin-top: 16px;
+            font-size: 13px; color: var(--g500);
+        }
+        .secondary span { display: flex; align-items: center; gap: 6px; }
+        .secondary strong { color: var(--g900); font-weight: 700; }
+
+        /* ═══════════════════════════════════════════════
+           RECEIPT / TICKET DE CAISSE
+        ═══════════════════════════════════════════════ */
+        .breakdown { padding: 0 32px 28px; }
+        .bd-toggle {
+            background: none; border: none; cursor: pointer; font-size: 13px; font-weight: 600;
+            color: var(--blue); padding: 8px 0; display: flex; align-items: center; gap: 8px;
+            transition: color 0.2s;
+        }
+        .bd-toggle:hover { color: var(--indigo); }
+        .bd-toggle .arr { transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); font-size: 10px; }
+        .bd-toggle.open .arr { transform: rotate(180deg); }
+        .receipt {
+            display: none; margin-top: 16px;
+            background: var(--g50); border: 1px solid var(--g200); border-radius: var(--r-lg);
+            padding: 24px; font-family: 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
+            animation: receiptSlide 0.3s ease-out;
+        }
+        .receipt.vis { display: block; }
+        @keyframes receiptSlide { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+        .receipt-header { text-align: center; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; color: var(--g400); padding-bottom: 14px; border-bottom: 1px dashed var(--g300); margin-bottom: 16px; }
+        .receipt-line { display: flex; justify-content: space-between; align-items: flex-start; padding: 7px 0; font-size: 13px; color: var(--g900); }
+        .receipt-line .rl-label { flex: 1; }
+        .receipt-line .rl-detail { font-size: 11px; color: var(--g400); display: block; margin-top: 2px; }
+        .receipt-line .rl-amount { font-weight: 700; white-space: nowrap; text-align: right; min-width: 90px; }
+        .receipt-line.discount .rl-label, .receipt-line.discount .rl-amount { color: var(--green-dark); }
+        .receipt-sep { border: none; border-top: 1px dashed var(--g300); margin: 12px 0; }
+        .receipt-subtotal { display: flex; justify-content: space-between; padding: 6px 0; font-size: 12px; color: var(--g500); }
+        .receipt-subtotal .rl-amount { font-weight: 700; }
+        .receipt-total { display: flex; justify-content: space-between; align-items: center; padding: 14px 0 6px; font-size: 16px; font-weight: 800; color: var(--blue); border-top: 2px solid var(--g900); margin-top: 8px; }
+        .receipt-footer { text-align: center; font-size: 10px; color: var(--g400); padding-top: 14px; border-top: 1px dashed var(--g300); margin-top: 14px; letter-spacing: 0.5px; }
+
+        /* ═══════════════════════════════════════════════
+           FOOTER
+        ═══════════════════════════════════════════════ */
+        .footer { text-align: center; padding: 24px; color: var(--g400); font-size: 12px; }
+
+        /* ═══════════════════════════════════════════════
+           ANIMATIONS
+        ═══════════════════════════════════════════════ */
+        .pulse { animation: pulse 0.35s cubic-bezier(0.4,0,0.2,1); }
+        @keyframes pulse { 0%{transform:scale(1)} 40%{transform:scale(1.06)} 100%{transform:scale(1)} }
+
+        .card, .result { animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
+        .result { animation-delay: 0.1s; }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* ═══════════════════════════════════════════════
+           RESPONSIVE
+        ═══════════════════════════════════════════════ */
+        /* Stepper aligns bottom with slider on same row */
+        .form-group:has(.stepper) { align-self: end; padding-top: 8px; }
+
+        @media (max-width: 768px) {
+            .main { padding: 24px 16px 60px; }
+            .hero h1 { font-size: 28px; }
+            .form-grid { grid-template-columns: 1fr; }
+            .slider-group { grid-column: 1 / -1; }
+            .result-grid { grid-template-columns: 1fr; }
+            .total-box { flex-direction: column; text-align: center; gap: 12px; }
+            .total-box .t-value { font-size: 36px; }
+            .secondary { flex-direction: column; align-items: flex-end; gap: 8px; }
+            .card, .result { border-radius: var(--r-xl); }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ═══ AUTH GATE ═══ -->
+<div class="auth-gate" id="auth-gate">
+    <div class="auth-card">
+        <svg class="auth-logo" viewBox="0 0 108 32" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#al1)"><path d="M34.26 27.85c3.8 0 6.5-2.21 6.5-5.22 0-5.81-8.58-4.78-8.58-6.73 0-.66.59-1.09 1.49-1.09 1.19 0 3.66.53 5.08 1.58l1.72-3.6c-1.62-1.29-4.06-1.85-6.3-1.85-3.9 0-6.6 2.21-6.6 5.38 0 5.97 8.52 4.36 8.52 6.47 0 .66-.8 1.16-1.92 1.16-1.81 0-4.32-.79-5.54-1.91l-1.75 3.47c1.68 1.42 4.62 2.34 7.39 2.34z" fill="#0F172A"/><path d="M53.06 11.28l-5.61 6.7V4.38h-4.65v23.1h4.65v-7.26l5.88 7.26h5.97l-7.26-8.38 6.73-7.83h-5.71z" fill="#0F172A"/><path d="M66.98 27.82c3.37 0 6.08-1.26 7.26-3.4l-3.66-2.25c-.56.96-2.05 1.65-3.5 1.65-2.18 0-3.66-1.12-4.09-3.2h11.59c.1-.63.13-1.39.13-1.95 0-4.32-3.43-7.72-7.82-7.72-4.72 0-8.42 3.63-8.42 8.35 0 4.82 3.78 8.52 8.52 8.52zm-3.96-10.37c.5-1.68 1.72-2.64 3.63-2.64 1.72 0 3.14 1.09 3.37 2.64h-7z" fill="#0F172A"/><path d="M81.47 4.38h-4.65v23.1h4.65V4.38z" fill="#0F172A"/><path d="M88.94 4.38H84.28v23.1h4.65V4.38z" fill="#0F172A"/><path d="M99.31 10.95c-4.79 0-8.42 3.63-8.42 8.45s3.63 8.42 8.42 8.42 8.42-3.6 8.42-8.42-3.67-8.45-8.42-8.45zm-3.9 8.45c0-2.28 1.69-3.99 3.9-3.99 2.18 0 3.9 1.72 3.9 3.99 0 2.24-1.72 3.96-3.9 3.96-2.21 0-3.9-1.72-3.9-3.96z" fill="#0F172A"/><g clip-path="url(#al2)"><path d="M1.33 15.54c-1.78-1.84-1.74-4.77.1-6.55l4.05-3.93 7.16 7.37-7.37 7.16-3.93-4.05z" fill="#50A5FF"/><path d="M5.48 5.06l3.69-3.58c2.03-1.98 5.29-1.93 7.26.12 1.98 2.04 1.93 5.29-.11 7.26l-3.69 3.58L5.48 5.06z" fill="#2B66FE"/><path d="M1.47 30.43c-1.98-2.04-1.93-5.29.11-7.26l11.06-10.73 3.93 4.05c1.78 1.83 1.74 4.77-.08 6.55l-7.73 7.51c-2.04 1.98-5.29 1.93-7.26-.11z" fill="#2E26F2"/></g></g><defs><clipPath id="al1"><rect width="108" height="32" fill="white"/></clipPath><clipPath id="al2"><rect width="18" height="32" fill="white"/></clipPath></defs></svg>
+        <h2 class="auth-title">Simulateur de prix</h2>
+        <p class="auth-sub">Connectez-vous avec votre compte Skello pour acc&eacute;der &agrave; l'outil.</p>
+        <button class="auth-google-btn" id="google-login-btn" onclick="triggerGoogleLogin()">
+            <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09A6.97 6.97 0 015.48 12c0-.72.13-1.43.36-2.09V7.07H2.18A11.96 11.96 0 001 12c0 1.94.46 3.77 1.18 5.07l3.66-2.98z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+            Se connecter avec Google
+        </button>
+        <div class="auth-error" id="auth-error"></div>
+        <p class="auth-domain">Acc&egrave;s r&eacute;serv&eacute; aux domaines @skello.io et @skello.es</p>
+    </div>
+</div>
+
+<div class="bg-mesh"></div>
+
+<header class="header">
+    <div class="header-left">
+        <svg class="logo-svg" viewBox="0 0 108 32" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#clip0_3736_10300)"><path d="M34.2575 27.8494C38.0537 27.8494 40.7606 25.6377 40.7606 22.6338C40.7606 16.8239 32.1779 17.8472 32.1779 15.8996C32.1779 15.2394 32.772 14.8103 33.6633 14.8103C34.8517 14.8103 37.3275 15.3384 38.7469 16.3948L40.4635 12.7966C38.846 11.5092 36.4032 10.948 34.1585 10.948C30.2632 10.948 27.5564 13.1597 27.5564 16.3288C27.5564 22.3037 36.0731 20.6861 36.0731 22.7988C36.0731 23.459 35.2808 23.9542 34.1585 23.9542C32.3429 23.9542 29.8341 23.1619 28.6127 22.0396L26.8632 25.5057C28.5467 26.9251 31.4846 27.8494 34.2575 27.8494Z" fill="#0F172A"/><path d="M53.0629 11.2781L47.4512 17.9793V4.37895H42.7967V27.4863H47.4512V20.224L53.327 27.4863H59.3019L52.0396 19.1016L58.7738 11.2781H53.0629Z" fill="#0F172A"/><path d="M66.9849 27.8164C70.352 27.8164 73.0588 26.562 74.2472 24.4163L70.583 22.1716C70.0218 23.1289 68.5364 23.8222 67.0839 23.8222C64.9052 23.8222 63.4197 22.6998 62.9906 20.6201H74.5773C74.6763 19.9929 74.7093 19.2337 74.7093 18.6725C74.7093 14.3481 71.2762 10.948 66.8858 10.948C62.1653 10.948 58.4682 14.5792 58.4682 19.2997C58.4682 24.1192 62.2314 27.8164 66.9849 27.8164ZM63.0236 17.4511C63.5188 15.7676 64.7402 14.8103 66.6548 14.8103C68.3713 14.8103 69.7908 15.8996 70.0218 17.4511H63.0236Z" fill="#0F172A"/><path d="M81.47 4.37895H76.8156V27.4863H81.47V4.37895Z" fill="#0F172A"/><path d="M88.9374 4.37895H84.2829V27.4863H88.9374V4.37895Z" fill="#0F172A"/><path d="M99.3135 10.948C94.527 10.948 90.8958 14.5792 90.8958 19.3987C90.8958 24.2183 94.527 27.8164 99.3135 27.8164C104.067 27.8164 107.731 24.2183 107.731 19.3987C107.731 14.5792 104.067 10.948 99.3135 10.948ZM95.4183 19.3987C95.4183 17.121 97.1018 15.4045 99.3135 15.4045C101.492 15.4045 103.209 17.121 103.209 19.3987C103.209 21.6435 101.492 23.36 99.3135 23.36C97.1018 23.36 95.4183 21.6435 95.4183 19.3987Z" fill="#0F172A"/><g clip-path="url(#clip1_3736_10300)"><path d="M1.33448 15.5357C-0.447236 13.7003 -0.403735 10.7681 1.43164 8.98634L5.47996 5.05639L12.636 12.4279L5.26443 19.584L1.33448 15.5357Z" fill="#50A5FF"/><path d="M5.47992 5.05637L9.1657 1.47836C11.2013 -0.497721 14.4534 -0.449474 16.4295 1.58612C18.4056 3.62172 18.3573 6.87383 16.3217 8.84992L12.6359 12.4279L5.47992 5.05637Z" fill="#2B66FE"/><path d="M1.47084 30.4257C-0.505245 28.3901 -0.456998 25.138 1.5786 23.162L12.6359 12.4279L16.5659 16.4762C18.3476 18.3116 18.3041 21.2438 16.4687 23.0255L8.73463 30.5335C6.69903 32.5096 3.44692 32.4613 1.47084 30.4257Z" fill="#2E26F2"/></g></g><defs><clipPath id="clip0_3736_10300"><rect width="107.789" height="32" fill="white"/></clipPath><clipPath id="clip1_3736_10300"><rect width="17.9368" height="32" fill="white"/></clipPath></defs></svg>
+    </div>
+    <div style="display:flex;align-items:center;gap:16px;">
+        <div class="lang-selector">
+            <button class="lang-btn active" data-lang="fr">FR</button>
+            <button class="lang-btn" data-lang="en">EN</button>
+            <button class="lang-btn" data-lang="es">ES</button>
+            <button class="lang-btn" data-lang="it">IT</button>
+        </div>
+        <div class="user-info" id="user-info" style="display:none;">
+            <img class="user-avatar" id="user-avatar" src="" alt="">
+            <span class="user-name" id="user-name"></span>
+            <button class="logout-btn" onclick="skelloLogout()">Logout</button>
+        </div>
+    </div>
+</header>
+
+<main class="main">
+    <div class="hero">
+        <h1><span data-i18n="titleMain">Simulateur</span> <span class="accent" data-i18n="titleAccent">de prix</span></h1>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <div class="icon"><svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M10 1L12.39 6.26L18.18 7.27L14.09 11.36L15.18 17.18L10 14.47L4.82 17.18L5.91 11.36L1.82 7.27L7.61 6.26L10 1Z" stroke="#2B66FE" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <h2 data-i18n="configTitle">Configuration</h2>
+        </div>
+        <div class="form-grid">
+            <div class="form-group" style="grid-column: 1 / -1;">
+                <label class="form-label" data-i18n="labelPack">Offre</label>
+                <div class="pill-group" id="pack-pills">
+                    <button class="pill" data-value="planning_standard" data-i18n-pack="planning_standard">Planning Standard</button>
+                    <button class="pill" data-value="planning_max" data-i18n-pack="planning_max">Planning Max</button>
+                    <button class="pill" data-value="badgeuse_standard" data-i18n-pack="badgeuse_standard">Badgeuse Standard</button>
+                    <button class="pill" data-value="badgeuse_max" data-i18n-pack="badgeuse_max">Badgeuse Max</button>
+                    <button class="pill active" data-value="duo_standard" data-i18n-pack="duo_standard">Duo Standard</button>
+                    <button class="pill" data-value="duo_max" data-i18n-pack="duo_max">Duo Max</button>
+                </div>
+                <input type="hidden" id="pack" value="duo_standard">
+            </div>
+            <div class="form-group">
+                <label class="form-label" data-i18n="labelOption">Option</label>
+                <div class="pill-group" id="option-pills">
+                    <button class="pill active" data-value="none" data-i18n="optNone">Aucune</button>
+                    <button class="pill" data-value="rh_expert">RH Expert</button>
+                </div>
+                <input type="hidden" id="option" value="none">
+            </div>
+            <div class="form-group">
+                <label class="form-label" data-i18n="labelCatalog">Catalogue</label>
+                <div class="pill-group" id="catalog-pills">
+                    <button class="pill active" data-value="FR" data-i18n-cat="FR">France</button>
+                    <button class="pill" data-value="ES" data-i18n-cat="ES">Espagne</button>
+                    <button class="pill" data-value="IT" data-i18n-cat="IT">Italie</button>
+                </div>
+                <input type="hidden" id="catalog" value="FR">
+            </div>
+            <div class="form-group">
+                <label class="form-label" data-i18n="labelFreq">Fr&eacute;quence</label>
+                <div class="pill-group" id="frequency-pills">
+                    <button class="pill active" data-value="monthly" data-i18n="fMonthly">Mensuel</button>
+                    <button class="pill" data-value="yearly" data-i18n="fYearly">Annuel</button>
+                </div>
+                <input type="hidden" id="frequency" value="monthly">
+            </div>
+            <div class="form-group slider-group">
+                <div class="slider-header">
+                    <label class="form-label" data-i18n="labelEmployees">Nombre d'employ&eacute;s total</label>
+                    <span class="slider-value" id="employees-display">20</span>
+                </div>
+                <div class="slider-wrap">
+                    <input type="range" id="employees" value="300" min="0" max="1000" step="1">
+                </div>
+            </div>
+            <div class="form-group" style="grid-column: 1 / 3;">
+                <label class="form-label" data-i18n="labelWorkspaces">&Eacute;tablissements</label>
+                <div class="stepper">
+                    <button class="stepper-btn" onclick="adj('workspaces',-1)">&minus;</button>
+                    <input type="number" id="workspaces" value="1" min="1" max="1000">
+                    <button class="stepper-btn" onclick="adj('workspaces',1)">+</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="result">
+        <div class="result-head">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M17.5 7.5C17.5 5.01 14.76 3 12 3S6.5 5.01 6.5 7.5c0 2.24 1.75 4.08 3.5 4.95V21h4v-8.55c1.75-.87 3.5-2.71 3.5-4.95z" fill="none" stroke="white" stroke-width="0"/><text x="12" y="17" text-anchor="middle" font-size="18" font-weight="bold" fill="white" font-family="sans-serif">&euro;</text></svg>
+            <h2 data-i18n="resultTitle">Tarification</h2>
+        </div>
+        <div class="result-body">
+            <div class="result-grid">
+                <div class="result-item">
+                    <div class="lbl" data-i18n="rPack">Pack</div>
+                    <div class="val" id="r-pack">0 <span class="cur">&euro;</span></div>
+                    <div class="val-original" id="r-pack-original"></div>
+                </div>
+                <div class="result-item" id="r-opt-wrap">
+                    <div class="lbl" data-i18n="rOption">Option RH</div>
+                    <div class="val" id="r-option">0 <span class="cur">&euro;</span></div>
+                    <div class="val-original" id="r-option-original"></div>
+                </div>
+                <div class="result-item">
+                    <div class="lbl" data-i18n="rWs">&Eacute;tablissements</div>
+                    <div class="val" id="r-ws">0 <span class="cur">&euro;</span></div>
+                    <div class="val-original" id="r-ws-original"></div>
+                </div>
+            </div>
+            <div class="discount-input-row">
+                <span class="form-label" data-i18n="labelDiscount">R&eacute;duction</span>
+                <div class="discount-wrap">
+                    <input type="number" id="discount" value="0" min="0" max="100" step="0.5">
+                    <span class="sfx">%</span>
+                </div>
+            </div>
+            <div class="discount-badge" id="d-badge"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span id="d-badge-txt"></span></div>
+            <hr class="divider">
+            <div class="total-box">
+                <div class="t-label"><span data-i18n="totalLabel">Co&ucirc;t mensuel</span></div>
+                <div class="t-right">
+                    <div class="t-value" id="r-total">0<span class="per"> &euro;<span data-i18n="perMonth">/mois</span></span></div>
+                </div>
+            </div>
+            <!-- Add user info (always visible) + yearly total when yearly selected -->
+            <div class="secondary" id="secondary-info">
+                <span id="yearly-line"><span data-i18n="yearlyTxt">Total annuel</span> : <strong id="r-yearly">0 &euro;</strong></span>
+                <span><span data-i18n="addUserTxt">Utilisateur suppl.</span> : <strong id="r-adduser">0 &euro;</strong></span>
+            </div>
+        </div>
+        <div class="breakdown">
+            <button class="bd-toggle" onclick="toggleBd()"><span class="arr">&#9660;</span> <span data-i18n="bdToggle">D&eacute;tail du calcul</span></button>
+            <div class="receipt" id="bd-table">
+                <div class="receipt-header" data-i18n="receiptHeader">Skello &mdash; D&eacute;tail de la tarification</div>
+                <div id="bd-body"></div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer class="footer"><p>Skello &mdash; <span data-i18n="footer">Outil interne &agrave; destination des &eacute;quipes commerciales</span></p></footer>
+
+<script>
+// =============================================
+// COMPLETE PRICING GRID FR (from official data)
+// =============================================
+const GRID_FR = [
+    [5,    39,   69,   19,   49,   59,    89,    20],
+    [10,   49,   89,   29,   69,   79,    119,   30],
+    [20,   79,   129,  39,   89,   119,   169,   40],
+    [30,   109,  169,  49,   109,  159,   219,   50],
+    [40,   139,  209,  59,   129,  199,   269,   60],
+    [50,   169,  249,  69,   149,  239,   319,   70],
+    [60,   199,  289,  79,   169,  279,   369,   80],
+    [70,   229,  329,  89,   189,  319,   419,   90],
+    [80,   259,  369,  99,   209,  359,   469,   100],
+    [90,   289,  409,  109,  229,  399,   519,   110],
+    [100,  319,  449,  119,  249,  439,   569,   120],
+    [120,  379,  529,  139,  289,  519,   669,   140],
+    [140,  439,  609,  159,  329,  599,   769,   160],
+    [160,  499,  689,  179,  369,  679,   869,   180],
+    [180,  559,  769,  199,  409,  759,   969,   200],
+    [200,  619,  849,  219,  449,  839,   1069,  220],
+    [250,  770,  1050, 270,  550,  1040,  1320,  270],
+    [300,  920,  1250, 320,  650,  1240,  1570,  320],
+    [350,  1070, 1450, 370,  750,  1440,  1820,  370],
+    [400,  1220, 1650, 420,  850,  1640,  2070,  420],
+    [450,  1370, 1850, 470,  950,  1840,  2320,  470],
+    [500,  1520, 2050, 520,  1050, 2040,  2570,  520],
+    [600,  1820, 2450, 620,  1250, 2440,  3070,  620],
+    [700,  2120, 2850, 720,  1450, 2840,  3570,  720],
+    [800,  2420, 3250, 820,  1650, 3240,  4070,  820],
+    [900,  2720, 3650, 920,  1850, 3640,  4570,  920],
+    [1000, 3020, 4050, 1020, 2050, 4040,  5070,  1020],
+    [1100, 3320, 4450, 1120, 2250, 4440,  5570,  1120],
+    [1200, 3620, 4850, 1220, 2450, 4840,  6070,  1220],
+    [1300, 3920, 5250, 1320, 2650, 5240,  6570,  1320],
+    [1400, 4220, 5650, 1420, 2850, 5640,  7070,  1420],
+    [1500, 4520, 6050, 1520, 3050, 6040,  7570,  1520],
+    [1600, 4820, 6450, 1620, 3250, 6440,  8070,  1620],
+    [1700, 5120, 6850, 1720, 3450, 6840,  8570,  1720],
+    [1800, 5420, 7250, 1820, 3650, 7240,  9070,  1820],
+    [1900, 5720, 7650, 1920, 3850, 7640,  9570,  1920],
+    [2000, 6020, 8050, 2020, 4050, 8040,  10070, 2020],
+    [2500, 7520, 10050,2520, 5050, 10040, 12570, 2520],
+    [3000, 9020, 12050,3020, 6050, 12040, 15070, 3020],
+    [3500, 10520,14050,3520, 7050, 14040, 17570, 3520],
+    [4000, 12020,16050,4020, 8050, 16040, 20070, 4020],
+    [4500, 13520,18050,4520, 9050, 18040, 22570, 4520],
+    [5000, 15020,20050,5020, 10050,20040, 25070, 5020],
+    [6000, 18020,24050,6020, 12050,24040, 30070, 6020],
+    [7000, 21020,28050,7020, 14050,28040, 35070, 7020],
+    [8000, 24020,32050,8020, 16050,32040, 40070, 8020],
+    [9000, 27020,36050,9020, 18050,36040, 45070, 9020],
+    [10000,30020,40050,10020,20050,40040, 50070, 10020],
+    [Infinity,33020,44050,11020,22050,41040,54070,11020]
+];
+
+const GRID_ESIT = [
+    [5,    29,   49,   19,   39,   49,    69,    20],
+    [10,   39,   69,   29,   59,   59,    89,    30],
+    [20,   59,   99,   39,   79,   89,    129,   40],
+    [30,   79,   129,  49,   99,   119,   169,   50],
+    [40,   99,   159,  59,   119,  149,   209,   60],
+    [50,   119,  189,  69,   139,  179,   249,   70],
+    [60,   139,  219,  79,   159,  209,   289,   80],
+    [70,   159,  249,  89,   179,  239,   329,   90],
+    [80,   179,  279,  99,   199,  269,   369,   100],
+    [90,   199,  309,  109,  219,  299,   409,   110],
+    [100,  219,  339,  119,  239,  329,   449,   120],
+    [120,  259,  399,  139,  279,  389,   529,   140],
+    [140,  299,  459,  159,  319,  449,   609,   160],
+    [160,  339,  519,  179,  359,  509,   689,   180],
+    [180,  379,  579,  199,  399,  569,   769,   200],
+    [200,  419,  639,  219,  439,  629,   849,   220],
+    [250,  520,  790,  270,  540,  780,   1050,  270],
+    [300,  620,  940,  320,  640,  930,   1250,  320],
+    [350,  720,  1090, 370,  740,  1080,  1450,  370],
+    [400,  820,  1240, 420,  840,  1230,  1650,  420],
+    [450,  920,  1390, 470,  940,  1380,  1850,  470],
+    [500,  1020, 1540, 520,  1040, 1530,  2050,  520],
+    [600,  1220, 1840, 620,  1240, 1830,  2450,  620],
+    [700,  1420, 2140, 720,  1440, 2130,  2850,  720],
+    [800,  1620, 2440, 820,  1640, 2430,  3250,  820],
+    [900,  1820, 2740, 920,  1840, 2730,  3650,  920],
+    [1000, 2020, 3040, 1020, 2040, 3030,  4050,  1020],
+    [1100, 2220, 3340, 1120, 2240, 3330,  4450,  1120],
+    [1200, 2420, 3640, 1220, 2440, 3630,  4850,  1220],
+    [1300, 2620, 3940, 1320, 2640, 3930,  5250,  1320],
+    [1400, 2820, 4240, 1420, 2840, 4230,  5650,  1420],
+    [1500, 3020, 4540, 1520, 3040, 4530,  6050,  1520],
+    [1600, 3220, 4840, 1620, 3240, 4830,  6450,  1620],
+    [1700, 3420, 5140, 1720, 3440, 5130,  6850,  1720],
+    [1800, 3620, 5440, 1820, 3640, 5430,  7250,  1820],
+    [1900, 3820, 5740, 1920, 3840, 5730,  7650,  1920],
+    [2000, 4020, 6040, 2020, 4040, 6030,  8050,  2020],
+    [2500, 5020, 7540, 2520, 5040, 7530,  10050, 2520],
+    [3000, 6020, 9040, 3020, 6040, 9030,  12050, 3020],
+    [3500, 7020, 10540,3520, 7040, 10530, 14050, 3520],
+    [4000, 8020, 12040,4020, 8040, 12030, 16050, 4020],
+    [4500, 9020, 13540,4520, 9040, 13530, 18050, 4520],
+    [5000, 10020,15040,5020, 10040,15030, 20050, 5020],
+    [6000, 12020,18040,6020, 12040,18030, 24050, 6020],
+    [7000, 14020,21040,7020, 14040,21030, 28050, 7020],
+    [8000, 16020,24040,8020, 16040,24030, 32050, 8020],
+    [9000, 18020,27040,9020, 18040,27030, 36050, 9020],
+    [10000,20020,30040,10020,20040,30030, 40050, 10020],
+    [Infinity,22020,33040,11020,22040,31030,43050,11020]
+];
+
+const ADD_USER_FR = { planning_standard:6, planning_max:8, badgeuse_standard:2, badgeuse_max:4, duo_standard:8, duo_max:10 };
+const ADD_USER_ESIT = { planning_standard:4, planning_max:6, badgeuse_standard:2, badgeuse_max:4, duo_standard:6, duo_max:8 };
+const ADD_USER_RH = 2;
+const COL = { planning_standard:1, planning_max:2, badgeuse_standard:3, badgeuse_max:4, duo_standard:5, duo_max:6, rh_expert:7 };
+const WS_PRICE = 40;
+
+// =============================================
+// COUNT-UP ANIMATION
+// =============================================
+let _prevTotal = 0;
+let _countUpRAF = null;
+
+function animateCountUp(targetValue, duration = 400) {
+    const totalEl = document.getElementById('r-total');
+    const t2 = I18N[currentLang];
+    const startValue = _prevTotal;
+    const diff = targetValue - startValue;
+
+    if (_countUpRAF) cancelAnimationFrame(_countUpRAF);
+
+    if (diff === 0 || duration === 0) {
+        totalEl.innerHTML = `${targetValue.toLocaleString('fr-FR')}<span class="per"> \u20AC<span data-i18n="perMonth">${t2.perMonth}</span></span>`;
+        _prevTotal = targetValue;
+        return;
+    }
+
+    const startTime = performance.now();
+
+    function tick(now) {
+        const elapsed = now - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        // Ease-out cubic for smooth deceleration
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const current = Math.round(startValue + diff * eased);
+
+        totalEl.innerHTML = `${current.toLocaleString('fr-FR')}<span class="per"> \u20AC<span data-i18n="perMonth">${t2.perMonth}</span></span>`;
+
+        if (progress < 1) {
+            _countUpRAF = requestAnimationFrame(tick);
+        } else {
+            _prevTotal = targetValue;
+            _countUpRAF = null;
+        }
+    }
+
+    _countUpRAF = requestAnimationFrame(tick);
+    _prevTotal = targetValue;
+}
+
+// =============================================
+// PRICING ENGINE
+// =============================================
+function lookupPrice(employees, packKey, catalog) {
+    const grid = (catalog === 'ES' || catalog === 'IT') ? GRID_ESIT : GRID_FR;
+    const col = COL[packKey];
+    if (col === undefined) return 0;
+    for (const row of grid) {
+        if (employees <= row[0]) return row[col];
+    }
+    return grid[grid.length - 1][col];
+}
+
+function calculate() {
+    const packKey = document.getElementById('pack').value;
+    const optionKey = document.getElementById('option').value;
+    const employees = currentEmployees;
+    const workspaces = Math.max(1, parseInt(document.getElementById('workspaces').value) || 1);
+    const catalog = document.getElementById('catalog').value;
+    const freq = document.getElementById('frequency').value;
+    const disc = Math.min(100, Math.max(0, parseFloat(document.getElementById('discount').value) || 0));
+
+    const packPrice = lookupPrice(employees, packKey, catalog);
+    const optionPrice = optionKey === 'rh_expert' ? lookupPrice(employees, 'rh_expert', catalog) : 0;
+    const wsTotal = WS_PRICE * workspaces;
+
+    const subtotal = packPrice + optionPrice + wsTotal;
+    const discAmt = Math.round(subtotal * disc / 100);
+    const total = subtotal - discAmt;
+
+    const activeGrid = (catalog === 'ES' || catalog === 'IT') ? GRID_ESIT : GRID_FR;
+    const bracket = activeGrid.find(r => employees <= r[0]);
+    const bracketLabel = bracket ? (bracket[0] === Infinity ? '10000+' : '<' + bracket[0]) : '?';
+    const addUserMap = (catalog === 'ES' || catalog === 'IT') ? ADD_USER_ESIT : ADD_USER_FR;
+    const addUser = addUserMap[packKey] || 0;
+
+    // Apply discount to individual line items for display
+    const packDisc = disc > 0 ? Math.round(packPrice * (1 - disc / 100)) : packPrice;
+    const optDisc = disc > 0 ? Math.round(optionPrice * (1 - disc / 100)) : optionPrice;
+    const wsDisc = disc > 0 ? Math.round(wsTotal * (1 - disc / 100)) : wsTotal;
+
+    // Update UI — show discounted price + original strikethrough
+    document.getElementById('r-pack').innerHTML = `${packDisc.toLocaleString('fr-FR')} <span class="cur">&euro;</span>`;
+    document.getElementById('r-pack-original').innerHTML = disc > 0 ? `${packPrice.toLocaleString('fr-FR')} \u20AC` : '';
+
+    document.getElementById('r-option').innerHTML = `${optDisc.toLocaleString('fr-FR')} <span class="cur">&euro;</span>`;
+    document.getElementById('r-option-original').innerHTML = (disc > 0 && optionKey !== 'none') ? `${optionPrice.toLocaleString('fr-FR')} \u20AC` : '';
+
+    document.getElementById('r-ws').innerHTML = `${wsDisc.toLocaleString('fr-FR')} <span class="cur">&euro;</span>`;
+    document.getElementById('r-ws-original').innerHTML = disc > 0 ? `${wsTotal.toLocaleString('fr-FR')} \u20AC` : '';
+
+    document.getElementById('r-opt-wrap').style.display = optionKey === 'none' ? 'none' : '';
+
+    const t2 = I18N[currentLang];
+    animateCountUp(total);
+
+    const yearlyLine = document.getElementById('yearly-line');
+    if (freq === 'yearly') {
+        yearlyLine.style.display = '';
+        document.getElementById('r-yearly').textContent = `${(total * 12).toLocaleString('fr-FR')} \u20AC`;
+    } else {
+        yearlyLine.style.display = 'none';
+    }
+    document.getElementById('r-adduser').textContent = `${addUser} \u20AC`;
+
+    const badge = document.getElementById('d-badge');
+    if (disc > 0) { badge.classList.add('vis'); document.getElementById('d-badge-txt').textContent = `${disc}% ${t2.discountApplied}`; }
+    else { badge.classList.remove('vis'); }
+
+    // Breakdown (receipt format)
+    const t = I18N[currentLang];
+    let rows = '';
+    const packName = getPackName();
+    const perMo = currentLang === 'fr' ? 'mois' : currentLang === 'en' ? 'mo' : currentLang === 'es' ? 'mes' : 'mese';
+
+    rows += `<div class="receipt-line"><div class="rl-label">${packName}<span class="rl-detail">${bracketLabel} ${t.empl}</span></div><div class="rl-amount">${packPrice.toLocaleString('fr-FR')} \u20AC</div></div>`;
+    if (optionKey === 'rh_expert') {
+        rows += `<div class="receipt-line"><div class="rl-label">RH Expert<span class="rl-detail">${bracketLabel} ${t.empl}</span></div><div class="rl-amount">${optionPrice.toLocaleString('fr-FR')} \u20AC</div></div>`;
+    }
+    rows += `<div class="receipt-line"><div class="rl-label">${t.rWs}<span class="rl-detail">${workspaces} \u00D7 ${WS_PRICE} \u20AC</span></div><div class="rl-amount">${wsTotal.toLocaleString('fr-FR')} \u20AC</div></div>`;
+
+    let sub = packPrice + optionPrice + wsTotal;
+    rows += `<hr class="receipt-sep">`;
+    rows += `<div class="receipt-subtotal"><div class="rl-label">${t.subtotal}</div><div class="rl-amount">${sub.toLocaleString('fr-FR')} \u20AC</div></div>`;
+    if (disc > 0) {
+        const d = Math.round(sub * disc / 100);
+        rows += `<div class="receipt-line discount"><div class="rl-label">${t.labelDiscount} (${disc}%)</div><div class="rl-amount">- ${d.toLocaleString('fr-FR')} \u20AC</div></div>`;
+    }
+    const finalTotal = sub - Math.round(sub * disc / 100);
+    rows += `<div class="receipt-total"><div>${t.totalLabel}</div><div>${finalTotal.toLocaleString('fr-FR')} \u20AC / ${perMo}</div></div>`;
+    rows += `<div class="receipt-footer">${employees} ${t.empl} \u00B7 ${workspaces} ${t.rWs.toLowerCase()} \u00B7 ${packName}</div>`;
+    document.getElementById('bd-body').innerHTML = rows;
+}
+
+// =============================================
+// UI
+// =============================================
+function adj(id, d) {
+    const el = document.getElementById(id);
+    const v = Math.max(parseInt(el.min)||1, Math.min(parseInt(el.max)||10000, (parseInt(el.value)||1)+d));
+    el.value = v;
+    calculate();
+}
+
+function toggleBd() {
+    document.getElementById('bd-table').classList.toggle('vis');
+    document.querySelector('.bd-toggle').classList.toggle('open');
+}
+
+// =============================================
+// PILL SELECTOR LOGIC
+// =============================================
+function initPillGroup(groupId, hiddenId) {
+    const group = document.getElementById(groupId);
+    const hidden = document.getElementById(hiddenId);
+    group.querySelectorAll('.pill').forEach(pill => {
+        pill.addEventListener('click', () => {
+            group.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+            pill.classList.add('active');
+            hidden.value = pill.dataset.value;
+            // Auto-switch catalog when language forces it
+            calculate();
+        });
+    });
+}
+
+initPillGroup('pack-pills', 'pack');
+initPillGroup('option-pills', 'option');
+initPillGroup('catalog-pills', 'catalog');
+initPillGroup('frequency-pills', 'frequency');
+
+// Helper: set active pill programmatically
+function setActivePill(groupId, value) {
+    const group = document.getElementById(groupId);
+    group.querySelectorAll('.pill').forEach(p => {
+        p.classList.toggle('active', p.dataset.value === value);
+    });
+    // Also update hidden input
+    const hiddenId = groupId.replace('-pills', '');
+    document.getElementById(hiddenId).value = value;
+}
+
+// Get selected pack display name (translated)
+function getPackName() {
+    const activePill = document.querySelector('#pack-pills .pill.active');
+    if (!activePill) return '';
+    const t = I18N[currentLang];
+    const packKey = activePill.dataset.value;
+    return (t.packNames && t.packNames[packKey]) || activePill.textContent;
+}
+
+// =============================================
+// LOGARITHMIC SLIDER (1 → 10,000)
+// =============================================
+const EMP_MIN = 1, EMP_MAX = 10000;
+
+function sliderToEmployees(sliderVal) {
+    // Map 0-1000 → 1-10000 logarithmically
+    const t = sliderVal / 1000;
+    return Math.round(EMP_MIN * Math.pow(EMP_MAX / EMP_MIN, t));
+}
+
+function employeesToSlider(emp) {
+    // Inverse: employees → slider position
+    if (emp <= EMP_MIN) return 0;
+    if (emp >= EMP_MAX) return 1000;
+    return Math.round(1000 * Math.log(emp / EMP_MIN) / Math.log(EMP_MAX / EMP_MIN));
+}
+
+let currentEmployees = 20;
+
+function updateSliderTrack(slider) {
+    const pct = (slider.value / 1000) * 100;
+    slider.style.background = `linear-gradient(to right, #2E26F2 0%, #50A5FF ${pct}%, #E2E8F0 ${pct}%, #E2E8F0 100%)`;
+}
+
+const empSlider = document.getElementById('employees');
+
+// Set initial position for 20 employees
+empSlider.value = employeesToSlider(20);
+document.getElementById('employees-display').textContent = '20';
+
+empSlider.addEventListener('input', function() {
+    currentEmployees = sliderToEmployees(parseInt(this.value));
+    // Always query live DOM — the span is replaced when user edits inline
+    const liveDisplay = document.getElementById('employees-display');
+    if (liveDisplay) liveDisplay.textContent = currentEmployees.toLocaleString('fr-FR');
+    updateSliderTrack(this);
+    calculate();
+});
+updateSliderTrack(empSlider);
+
+// Click on value → editable input (event delegation)
+document.querySelector('.slider-header').addEventListener('click', function(e) {
+    const display = e.target.closest('.slider-value');
+    if (!display || display.tagName === 'INPUT') return;
+
+    const currentVal = currentEmployees;
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.className = 'slider-value-input';
+    input.value = currentVal;
+    input.min = EMP_MIN;
+    input.max = EMP_MAX;
+    display.replaceWith(input);
+    input.focus();
+    input.select();
+
+    function commitValue() {
+        let v = parseInt(input.value) || 1;
+        const raw = v;
+        v = Math.max(EMP_MIN, Math.min(EMP_MAX, v));
+        // Flash feedback if value was clamped
+        if (raw !== v) {
+            input.value = v;
+            input.style.color = '#e74c3c';
+            input.style.webkitTextFillColor = '#e74c3c';
+            setTimeout(() => doReplace(), 350);
+            return;
+        }
+        doReplace();
+        function doReplace() {
+            currentEmployees = v;
+            const span = document.createElement('span');
+            span.className = 'slider-value';
+            span.id = 'employees-display';
+            span.textContent = v.toLocaleString('fr-FR');
+            input.replaceWith(span);
+            empSlider.value = employeesToSlider(v);
+            updateSliderTrack(empSlider);
+            calculate();
+        }
+    }
+
+    input.addEventListener('blur', commitValue);
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+        if (e.key === 'Escape') { input.value = currentVal; input.blur(); }
+    });
+});
+
+// Header scroll effect
+window.addEventListener('scroll', () => {
+    document.querySelector('.header').classList.toggle('scrolled', window.scrollY > 10);
+}, { passive: true });
+
+// =============================================
+// I18N
+// =============================================
+const I18N = {
+    fr: {
+        titleMain: "Simulateur", titleAccent: "de prix",
+        configTitle: "Configuration", labelPack: "Offre", labelOption: "Option", labelCatalog: "Catalogue",
+        labelEmployees: "Nombre d'employ\u00E9s total", labelWorkspaces: "\u00C9tablissements", labelFreq: "Fr\u00E9quence",
+        labelDiscount: "R\u00E9duction", fMonthly: "Mensuel", fYearly: "Annuel", optNone: "Aucune",
+        resultTitle: "Tarification", rPack: "Offre", rOption: "Option RH", rWs: "\u00C9tablissements",
+        totalLabel: "Co\u00FBt mensuel", perMonth: "/mois",
+        yearlyTxt: "Total annuel", addUserTxt: "Utilisateur suppl.", bdToggle: "D\u00E9tail du calcul",
+        receiptHeader: "Skello \u2014 D\u00E9tail de la tarification", subtotal: "Sous-total",
+        footer: "Outil interne \u00E0 destination des \u00E9quipes commerciales",
+        empl: "employ\u00E9s",
+        catFR: "France (FR)", catES: "Espagne (ES)", catIT: "Italie (IT)",
+        discountApplied: "de r\u00E9duction appliqu\u00E9e",
+        packNames: { planning_standard: "Planning Standard", planning_max: "Planning Max", badgeuse_standard: "Badgeuse Standard", badgeuse_max: "Badgeuse Max", duo_standard: "Duo Standard", duo_max: "Duo Max" }
+    },
+    en: {
+        titleMain: "Price", titleAccent: "simulator",
+        configTitle: "Configuration", labelPack: "Plan", labelOption: "Option", labelCatalog: "Catalog",
+        labelEmployees: "Total number of employees", labelWorkspaces: "Establishments", labelFreq: "Frequency",
+        labelDiscount: "Discount", fMonthly: "Monthly", fYearly: "Yearly", optNone: "None",
+        resultTitle: "Pricing", rPack: "Plan", rOption: "HR Option", rWs: "Establishments",
+        totalLabel: "Monthly cost", perMonth: "/mo",
+        yearlyTxt: "Yearly total", addUserTxt: "Additional user", bdToggle: "Pricing breakdown",
+        receiptHeader: "Skello \u2014 Pricing breakdown", subtotal: "Subtotal",
+        footer: "Internal tool for sales teams",
+        empl: "employees",
+        catFR: "France (FR)", catES: "Spain (ES)", catIT: "Italy (IT)",
+        discountApplied: "discount applied",
+        packNames: { planning_standard: "Scheduling Standard", planning_max: "Planning Max", badgeuse_standard: "Standard Clocking", badgeuse_max: "Clocking Max", duo_standard: "Duo Standard", duo_max: "Duo Max" }
+    },
+    es: {
+        titleMain: "Simulador", titleAccent: "de precios",
+        configTitle: "Configuraci\u00F3n", labelPack: "Oferta", labelOption: "Opci\u00F3n", labelCatalog: "Cat\u00E1logo",
+        labelEmployees: "N\u00FAmero total de empleados", labelWorkspaces: "Establecimientos", labelFreq: "Frecuencia",
+        labelDiscount: "Descuento", fMonthly: "Mensual", fYearly: "Anual", optNone: "Ninguna",
+        resultTitle: "Tarificaci\u00F3n", rPack: "Oferta", rOption: "Opci\u00F3n RH", rWs: "Establecimientos",
+        totalLabel: "Coste mensual", perMonth: "/mes",
+        yearlyTxt: "Total anual", addUserTxt: "Usuario adicional", bdToggle: "Detalle del c\u00E1lculo",
+        receiptHeader: "Skello \u2014 Detalle de la tarificaci\u00F3n", subtotal: "Subtotal",
+        footer: "Herramienta interna para equipos comerciales",
+        empl: "empleados",
+        catFR: "Francia (FR)", catES: "Espa\u00F1a (ES)", catIT: "Italia (IT)",
+        discountApplied: "de descuento aplicado",
+        packNames: { planning_standard: "Planificación Estándar", planning_max: "Planificación Max", badgeuse_standard: "Fichaje Estándar", badgeuse_max: "Fichaje Max", duo_standard: "Duo Estándar", duo_max: "Duo Max" }
+    },
+    it: {
+        titleMain: "Simulatore", titleAccent: "di prezzi",
+        configTitle: "Configurazione", labelPack: "Offerta", labelOption: "Opzione", labelCatalog: "Catalogo",
+        labelEmployees: "Numero totale di dipendenti", labelWorkspaces: "Stabilimenti", labelFreq: "Frequenza",
+        labelDiscount: "Sconto", fMonthly: "Mensile", fYearly: "Annuale", optNone: "Nessuna",
+        resultTitle: "Tariffazione", rPack: "Offerta", rOption: "Opzione RH", rWs: "Stabilimenti",
+        totalLabel: "Costo mensile", perMonth: "/mese",
+        yearlyTxt: "Totale annuale", addUserTxt: "Utente aggiuntivo", bdToggle: "Dettaglio del calcolo",
+        receiptHeader: "Skello \u2014 Dettaglio della tariffazione", subtotal: "Subtotale",
+        footer: "Strumento interno per i team commerciali",
+        empl: "dipendenti",
+        catFR: "Francia (FR)", catES: "Spagna (ES)", catIT: "Italia (IT)",
+        discountApplied: "di sconto applicato",
+        packNames: { planning_standard: "Pianificazione Standard", planning_max: "Pianificazione Max", badgeuse_standard: "Timbratura Standard", badgeuse_max: "Timbratura Max", duo_standard: "Duo Standard", duo_max: "Duo Max" }
+    }
+};
+
+let currentLang = 'fr';
+
+function switchLang(lang) {
+    currentLang = lang;
+    document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === lang));
+    const t = I18N[lang];
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const k = el.dataset.i18n;
+        if (t[k] && el.tagName !== 'INPUT' && el.tagName !== 'SELECT' && el.tagName !== 'BUTTON') el.textContent = t[k];
+    });
+    // Update pill labels for i18n buttons
+    document.querySelectorAll('#option-pills .pill[data-i18n]').forEach(p => {
+        const k = p.dataset.i18n;
+        if (t[k]) p.textContent = t[k];
+    });
+    document.querySelectorAll('#frequency-pills .pill[data-i18n]').forEach(p => {
+        const k = p.dataset.i18n;
+        if (t[k]) p.textContent = t[k];
+    });
+    // Update pack pill labels
+    document.querySelectorAll('#pack-pills .pill[data-i18n-pack]').forEach(p => {
+        const packKey = p.dataset.i18nPack;
+        if (t.packNames && t.packNames[packKey]) p.textContent = t.packNames[packKey];
+    });
+    // Update catalog pill labels
+    document.querySelectorAll('#catalog-pills .pill[data-i18n-cat]').forEach(p => {
+        const catKey = 'cat' + p.dataset.value;
+        if (t[catKey]) p.textContent = t[catKey];
+    });
+    // Show catalog only in English
+    const catalogGroup = document.getElementById('catalog-pills').closest('.form-group');
+    catalogGroup.style.display = (lang === 'en') ? '' : 'none';
+    document.title = `Skello - ${t.titleMain} ${t.titleAccent}`;
+    // Auto-switch catalog based on lang
+    if (lang === 'es') setActivePill('catalog-pills', 'ES');
+    else if (lang === 'it') setActivePill('catalog-pills', 'IT');
+    else setActivePill('catalog-pills', 'FR');
+    calculate();
+}
+
+// =============================================
+// LISTENERS
+// =============================================
+document.querySelectorAll('input[type="number"]').forEach(el => {
+    el.addEventListener('change', calculate);
+    el.addEventListener('input', calculate);
+});
+document.getElementById('discount').addEventListener('input', calculate);
+document.querySelectorAll('.lang-btn').forEach(b => b.addEventListener('click', () => switchLang(b.dataset.lang)));
+
+switchLang('fr');
+
+// =============================================
+// GOOGLE OAUTH — AUTH GATE
+// =============================================
+const GOOGLE_CLIENT_ID = '261796576867-800anci88p7h80srjqd3jhb6kmfar5g3.apps.googleusercontent.com';
+const ALLOWED_DOMAINS = ['skello.io', 'skello.es'];
+const SESSION_KEY = 'skello_pricing_session';
+
+function decodeJWT(token) {
+    try {
+        const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+        return JSON.parse(atob(base64));
+    } catch (e) {
+        return null;
+    }
+}
+
+function showAuthError(msg) {
+    const el = document.getElementById('auth-error');
+    el.textContent = msg;
+    el.style.display = 'block';
+    setTimeout(() => { el.style.display = 'none'; }, 5000);
+}
+
+function grantAccess(user) {
+    document.getElementById('auth-gate').classList.add('hidden');
+    const userInfo = document.getElementById('user-info');
+    const userAvatar = document.getElementById('user-avatar');
+    const userName = document.getElementById('user-name');
+    userAvatar.src = user.picture || '';
+    userAvatar.alt = user.name || '';
+    userName.textContent = user.given_name || user.name || user.email;
+    userInfo.style.display = 'flex';
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify({
+        email: user.email, name: user.name,
+        given_name: user.given_name, picture: user.picture
+    }));
+}
+
+function handleCredentialResponse(response) {
+    const payload = decodeJWT(response.credential);
+    if (!payload || !payload.email) {
+        showAuthError("Erreur d'authentification. Veuillez réessayer.");
+        return;
+    }
+    const domain = payload.email.split('@')[1];
+    if (!ALLOWED_DOMAINS.includes(domain)) {
+        showAuthError(`Accès refusé : le domaine @${domain} n'est pas autorisé.`);
+        return;
+    }
+    grantAccess(payload);
+}
+
+function triggerGoogleLogin() {
+    if (typeof google === 'undefined' || !google.accounts) {
+        showAuthError('Google Identity Services en cours de chargement, réessayez...');
+        return;
+    }
+    google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: handleCredentialResponse,
+        auto_select: false,
+        context: 'signin'
+    });
+    google.accounts.id.prompt((notification) => {
+        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+            // Fallback: redirect to Google OAuth2 implicit flow
+            const redirectUri = window.location.origin + window.location.pathname;
+            const params = new URLSearchParams({
+                client_id: GOOGLE_CLIENT_ID,
+                redirect_uri: redirectUri,
+                response_type: 'token',
+                scope: 'openid email profile',
+                prompt: 'select_account'
+            });
+            window.location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params.toString();
+        }
+    });
+}
+
+async function handleOAuthToken(accessToken) {
+    const btn = document.getElementById('google-login-btn');
+    btn.disabled = true;
+    btn.textContent = 'Connexion...';
+    try {
+        const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+            headers: { 'Authorization': 'Bearer ' + accessToken }
+        });
+        if (!res.ok) throw new Error('Token invalide');
+        const user = await res.json();
+        const domain = (user.email || '').split('@')[1];
+        if (!ALLOWED_DOMAINS.includes(domain)) {
+            showAuthError(`Accès refusé : le domaine @${domain} n'est pas autorisé.`);
+            btn.disabled = false;
+            btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09A6.97 6.97 0 015.48 12c0-.72.13-1.43.36-2.09V7.07H2.18A11.96 11.96 0 001 12c0 1.94.46 3.77 1.18 5.07l3.66-2.98z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg> Se connecter avec Google';
+            return;
+        }
+        grantAccess({
+            email: user.email, name: user.name,
+            given_name: user.given_name, picture: user.picture
+        });
+    } catch (e) {
+        showAuthError("Erreur d'authentification : " + e.message);
+        btn.disabled = false;
+        btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09A6.97 6.97 0 015.48 12c0-.72.13-1.43.36-2.09V7.07H2.18A11.96 11.96 0 001 12c0 1.94.46 3.77 1.18 5.07l3.66-2.98z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg> Se connecter avec Google';
+    }
+}
+
+function skelloLogout() {
+    sessionStorage.removeItem(SESSION_KEY);
+    document.getElementById('auth-gate').classList.remove('hidden');
+    document.getElementById('user-info').style.display = 'none';
+    document.getElementById('auth-error').style.display = 'none';
+    if (typeof google !== 'undefined' && google.accounts) {
+        google.accounts.id.disableAutoSelect();
+    }
+}
+
+// ── Check session on page load ──
+(function checkSession() {
+    const stored = sessionStorage.getItem(SESSION_KEY);
+    if (stored) {
+        try {
+            const user = JSON.parse(stored);
+            if (user && user.email && ALLOWED_DOMAINS.includes(user.email.split('@')[1])) {
+                grantAccess(user);
+                return;
+            }
+        } catch (e) {}
+    }
+    // Check for OAuth2 redirect token in URL hash
+    if (window.location.hash) {
+        const params = new URLSearchParams(window.location.hash.substring(1));
+        const accessToken = params.get('access_token');
+        if (accessToken) {
+            window.history.replaceState({}, document.title, window.location.pathname);
+            handleOAuthToken(accessToken);
+        }
+    }
+})();
+</script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+
+</body>
+</html>
