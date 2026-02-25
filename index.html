@@ -521,7 +521,7 @@
                 <label class="form-label" data-i18n="labelOption">Option</label>
                 <div class="pill-group" id="option-pills">
                     <button class="pill active" data-value="none" data-i18n="optNone">Aucune</button>
-                    <button class="pill" data-value="rh_expert">RH Expert</button>
+                    <button class="pill" data-value="rh_expert" data-i18n="optRhExpert">RH Expert</button>
                 </div>
                 <input type="hidden" id="option" value="none">
             </div>
@@ -538,7 +538,10 @@
                 <label class="form-label" data-i18n="labelFreq">Fr&eacute;quence</label>
                 <div class="pill-group" id="frequency-pills">
                     <button class="pill active" data-value="monthly" data-i18n="fMonthly">Mensuel</button>
+                    <button class="pill" data-value="semiannual" data-i18n="fSemiannual">Semestriel</button>
                     <button class="pill" data-value="yearly" data-i18n="fYearly">Annuel</button>
+                    <button class="pill" data-value="biennial" data-i18n="fBiennial">Tous les 2 ans</button>
+                    <button class="pill" data-value="triennial" data-i18n="fTriennial">Tous les 3 ans</button>
                 </div>
                 <input type="hidden" id="frequency" value="monthly">
             </div>
@@ -552,7 +555,7 @@
                 </div>
             </div>
             <div class="form-group" style="grid-column: 1 / 3;">
-                <label class="form-label" data-i18n="labelWorkspaces">&Eacute;tablissements</label>
+                <label class="form-label" data-i18n="labelWorkspaces">Espace de travail</label>
                 <div class="stepper">
                     <button class="stepper-btn" onclick="adj('workspaces',-1)">&minus;</button>
                     <input type="number" id="workspaces" value="1" min="1" max="1000">
@@ -580,7 +583,7 @@
                     <div class="val-original" id="r-option-original"></div>
                 </div>
                 <div class="result-item">
-                    <div class="lbl" data-i18n="rWs">&Eacute;tablissements</div>
+                    <div class="lbl" data-i18n="rWs">Espace de travail</div>
                     <div class="val" id="r-ws">0 <span class="cur">&euro;</span></div>
                     <div class="val-original" id="r-ws-original"></div>
                 </div>
@@ -597,12 +600,13 @@
             <div class="total-box">
                 <div class="t-label"><span data-i18n="totalLabel">Co&ucirc;t mensuel</span></div>
                 <div class="t-right">
+                    <div class="val-original" id="r-total-original" style="display:none;font-size:15px;text-align:right;"></div>
                     <div class="t-value" id="r-total">0<span class="per"> &euro;<span data-i18n="perMonth">/mois</span></span></div>
                 </div>
             </div>
             <!-- Add user info (always visible) + yearly total when yearly selected -->
             <div class="secondary" id="secondary-info">
-                <span id="yearly-line"><span data-i18n="yearlyTxt">Total annuel</span> : <strong id="r-yearly">0 &euro;</strong></span>
+                <span id="yearly-line"><span class="period-label">Total annuel</span> : <strong id="r-yearly">0 &euro;</strong></span>
                 <span><span data-i18n="addUserTxt">Utilisateur suppl.</span> : <strong id="r-adduser">0 &euro;</strong></span>
             </div>
         </div>
@@ -807,7 +811,7 @@ function calculate() {
 
     const activeGrid = (catalog === 'ES' || catalog === 'IT') ? GRID_ESIT : GRID_FR;
     const bracket = activeGrid.find(r => employees <= r[0]);
-    const bracketLabel = bracket ? (bracket[0] === Infinity ? '10000+' : '<' + bracket[0]) : '?';
+    const bracketLabel = bracket ? (bracket[0] === Infinity ? '10000+' : bracket[0]) : '?';
     const addUserMap = (catalog === 'ES' || catalog === 'IT') ? ADD_USER_ESIT : ADD_USER_FR;
     const addUser = addUserMap[packKey] || 0;
 
@@ -831,10 +835,22 @@ function calculate() {
     const t2 = I18N[currentLang];
     animateCountUp(total);
 
+    // Show strikethrough original total if discount active
+    const totalOrigEl = document.getElementById('r-total-original');
+    if (disc > 0) {
+        totalOrigEl.textContent = `${subtotal.toLocaleString('fr-FR')} \u20AC${t2.perMonth}`;
+        totalOrigEl.style.display = '';
+    } else {
+        totalOrigEl.style.display = 'none';
+    }
+
     const yearlyLine = document.getElementById('yearly-line');
-    if (freq === 'yearly') {
+    const periodMultipliers = { semiannual: 6, yearly: 12, biennial: 24, triennial: 36 };
+    const periodTxtKeys = { semiannual: 'semiannualTxt', yearly: 'yearlyTxt', biennial: 'biennialTxt', triennial: 'triennialTxt' };
+    if (freq !== 'monthly' && periodMultipliers[freq]) {
         yearlyLine.style.display = '';
-        document.getElementById('r-yearly').textContent = `${(total * 12).toLocaleString('fr-FR')} \u20AC`;
+        document.querySelector('#yearly-line .period-label').textContent = t2[periodTxtKeys[freq]] || t2.yearlyTxt;
+        document.getElementById('r-yearly').textContent = `${(total * periodMultipliers[freq]).toLocaleString('fr-FR')} \u20AC`;
     } else {
         yearlyLine.style.display = 'none';
     }
@@ -852,7 +868,8 @@ function calculate() {
 
     rows += `<div class="receipt-line"><div class="rl-label">${packName}<span class="rl-detail">${bracketLabel} ${t.empl}</span></div><div class="rl-amount">${packPrice.toLocaleString('fr-FR')} \u20AC</div></div>`;
     if (optionKey === 'rh_expert') {
-        rows += `<div class="receipt-line"><div class="rl-label">RH Expert<span class="rl-detail">${bracketLabel} ${t.empl}</span></div><div class="rl-amount">${optionPrice.toLocaleString('fr-FR')} \u20AC</div></div>`;
+        const optName = t.optRhExpert || 'RH Expert';
+        rows += `<div class="receipt-line"><div class="rl-label">${optName}<span class="rl-detail">${bracketLabel} ${t.empl}</span></div><div class="rl-amount">${optionPrice.toLocaleString('fr-FR')} \u20AC</div></div>`;
     }
     rows += `<div class="receipt-line"><div class="rl-label">${t.rWs}<span class="rl-detail">${workspaces} \u00D7 ${WS_PRICE} \u20AC</span></div><div class="rl-amount">${wsTotal.toLocaleString('fr-FR')} \u20AC</div></div>`;
 
@@ -865,6 +882,13 @@ function calculate() {
     }
     const finalTotal = sub - Math.round(sub * disc / 100);
     rows += `<div class="receipt-total"><div>${t.totalLabel}</div><div>${finalTotal.toLocaleString('fr-FR')} \u20AC / ${perMo}</div></div>`;
+    // Period total in receipt
+    const periodMultipliersR = { semiannual: 6, yearly: 12, biennial: 24, triennial: 36 };
+    const periodTxtKeysR = { semiannual: 'semiannualTxt', yearly: 'yearlyTxt', biennial: 'biennialTxt', triennial: 'triennialTxt' };
+    if (freq !== 'monthly' && periodMultipliersR[freq]) {
+        const periodTotal = finalTotal * periodMultipliersR[freq];
+        rows += `<div class="receipt-subtotal"><div>${t[periodTxtKeysR[freq]]}</div><div class="rl-amount">${periodTotal.toLocaleString('fr-FR')} \u20AC</div></div>`;
+    }
     rows += `<div class="receipt-footer">${employees} ${t.empl} \u00B7 ${workspaces} ${t.rWs.toLowerCase()} \u00B7 ${packName}</div>`;
     document.getElementById('bd-body').innerHTML = rows;
 }
@@ -1028,11 +1052,14 @@ const I18N = {
     fr: {
         titleMain: "Simulateur", titleAccent: "de prix",
         configTitle: "Configuration", labelPack: "Offre", labelOption: "Option", labelCatalog: "Catalogue",
-        labelEmployees: "Nombre d'employ\u00E9s total", labelWorkspaces: "\u00C9tablissements", labelFreq: "Fr\u00E9quence",
-        labelDiscount: "R\u00E9duction", fMonthly: "Mensuel", fYearly: "Annuel", optNone: "Aucune",
-        resultTitle: "Tarification", rPack: "Offre", rOption: "Option RH", rWs: "\u00C9tablissements",
+        labelEmployees: "Nombre d'employ\u00E9s total", labelWorkspaces: "Espace de travail", labelFreq: "Fr\u00E9quence",
+        labelDiscount: "R\u00E9duction",
+        fMonthly: "Mensuel", fYearly: "Annuel", fSemiannual: "Semestriel", fBiennial: "Tous les 2 ans", fTriennial: "Tous les 3 ans",
+        optNone: "Aucune", optRhExpert: "RH Expert",
+        resultTitle: "Tarification", rPack: "Offre", rOption: "Option RH", rWs: "Espace de travail",
         totalLabel: "Co\u00FBt mensuel", perMonth: "/mois",
-        yearlyTxt: "Total annuel", addUserTxt: "Utilisateur suppl.", bdToggle: "D\u00E9tail du calcul",
+        yearlyTxt: "Total annuel", semiannualTxt: "Total semestriel", biennialTxt: "Total biennal", triennialTxt: "Total triennal",
+        addUserTxt: "Utilisateur suppl.", bdToggle: "D\u00E9tail du calcul",
         receiptHeader: "Skello \u2014 D\u00E9tail de la tarification", subtotal: "Sous-total",
         footer: "Outil interne \u00E0 destination des \u00E9quipes commerciales",
         empl: "employ\u00E9s",
@@ -1043,47 +1070,56 @@ const I18N = {
     en: {
         titleMain: "Price", titleAccent: "simulator",
         configTitle: "Configuration", labelPack: "Plan", labelOption: "Option", labelCatalog: "Catalog",
-        labelEmployees: "Total number of employees", labelWorkspaces: "Establishments", labelFreq: "Frequency",
-        labelDiscount: "Discount", fMonthly: "Monthly", fYearly: "Yearly", optNone: "None",
-        resultTitle: "Pricing", rPack: "Plan", rOption: "HR Option", rWs: "Establishments",
+        labelEmployees: "Total number of employees", labelWorkspaces: "Workspace", labelFreq: "Frequency",
+        labelDiscount: "Discount",
+        fMonthly: "Monthly", fYearly: "Yearly", fSemiannual: "Semi-annual", fBiennial: "Biennial", fTriennial: "Triennial",
+        optNone: "None", optRhExpert: "HR Expert",
+        resultTitle: "Pricing", rPack: "Plan", rOption: "HR Option", rWs: "Workspace",
         totalLabel: "Monthly cost", perMonth: "/mo",
-        yearlyTxt: "Yearly total", addUserTxt: "Additional user", bdToggle: "Pricing breakdown",
+        yearlyTxt: "Yearly total", semiannualTxt: "Semi-annual total", biennialTxt: "Biennial total", triennialTxt: "Triennial total",
+        addUserTxt: "Additional user", bdToggle: "Pricing breakdown",
         receiptHeader: "Skello \u2014 Pricing breakdown", subtotal: "Subtotal",
         footer: "Internal tool for sales teams",
         empl: "employees",
         catFR: "France (FR)", catES: "Spain (ES)", catIT: "Italy (IT)",
         discountApplied: "discount applied",
-        packNames: { planning_standard: "Scheduling Standard", planning_max: "Planning Max", badgeuse_standard: "Standard Clocking", badgeuse_max: "Clocking Max", duo_standard: "Duo Standard", duo_max: "Duo Max" }
+        packNames: { planning_standard: "Planning Standard", planning_max: "Planning Max", badgeuse_standard: "Timeclock Standard", badgeuse_max: "Timeclock Max", duo_standard: "Duo Standard", duo_max: "Duo Max" }
     },
     es: {
         titleMain: "Simulador", titleAccent: "de precios",
         configTitle: "Configuraci\u00F3n", labelPack: "Oferta", labelOption: "Opci\u00F3n", labelCatalog: "Cat\u00E1logo",
-        labelEmployees: "N\u00FAmero total de empleados", labelWorkspaces: "Establecimientos", labelFreq: "Frecuencia",
-        labelDiscount: "Descuento", fMonthly: "Mensual", fYearly: "Anual", optNone: "Ninguna",
-        resultTitle: "Tarificaci\u00F3n", rPack: "Oferta", rOption: "Opci\u00F3n RH", rWs: "Establecimientos",
+        labelEmployees: "N\u00FAmero total de empleados", labelWorkspaces: "Espacio de trabajo", labelFreq: "Frecuencia",
+        labelDiscount: "Descuento",
+        fMonthly: "Mensual", fYearly: "Anual", fSemiannual: "Semestral", fBiennial: "Bienal", fTriennial: "Trienal",
+        optNone: "Ninguna", optRhExpert: "Experto RRHH",
+        resultTitle: "Tarificaci\u00F3n", rPack: "Oferta", rOption: "Opci\u00F3n RH", rWs: "Espacio de trabajo",
         totalLabel: "Coste mensual", perMonth: "/mes",
-        yearlyTxt: "Total anual", addUserTxt: "Usuario adicional", bdToggle: "Detalle del c\u00E1lculo",
+        yearlyTxt: "Total anual", semiannualTxt: "Total semestral", biennialTxt: "Total bienal", triennialTxt: "Total trienal",
+        addUserTxt: "Usuario adicional", bdToggle: "Detalle del c\u00E1lculo",
         receiptHeader: "Skello \u2014 Detalle de la tarificaci\u00F3n", subtotal: "Subtotal",
         footer: "Herramienta interna para equipos comerciales",
         empl: "empleados",
         catFR: "Francia (FR)", catES: "Espa\u00F1a (ES)", catIT: "Italia (IT)",
         discountApplied: "de descuento aplicado",
-        packNames: { planning_standard: "Planificación Estándar", planning_max: "Planificación Max", badgeuse_standard: "Fichaje Estándar", badgeuse_max: "Fichaje Max", duo_standard: "Duo Estándar", duo_max: "Duo Max" }
+        packNames: { planning_standard: "Planificaci\u00F3n Est\u00E1ndar", planning_max: "Planificaci\u00F3n Max", badgeuse_standard: "Fichaje Est\u00E1ndar", badgeuse_max: "Fichaje Max", duo_standard: "Duo Est\u00E1ndar", duo_max: "Duo Max" }
     },
     it: {
         titleMain: "Simulatore", titleAccent: "di prezzi",
         configTitle: "Configurazione", labelPack: "Offerta", labelOption: "Opzione", labelCatalog: "Catalogo",
-        labelEmployees: "Numero totale di dipendenti", labelWorkspaces: "Stabilimenti", labelFreq: "Frequenza",
-        labelDiscount: "Sconto", fMonthly: "Mensile", fYearly: "Annuale", optNone: "Nessuna",
-        resultTitle: "Tariffazione", rPack: "Offerta", rOption: "Opzione RH", rWs: "Stabilimenti",
+        labelEmployees: "Numero totale di dipendenti", labelWorkspaces: "Spazio di lavoro", labelFreq: "Frequenza",
+        labelDiscount: "Sconto",
+        fMonthly: "Mensile", fYearly: "Annuale", fSemiannual: "Semestrale", fBiennial: "Biennale", fTriennial: "Triennale",
+        optNone: "Nessuna", optRhExpert: "HR Esperto",
+        resultTitle: "Tariffazione", rPack: "Offerta", rOption: "Opzione RH", rWs: "Spazio di lavoro",
         totalLabel: "Costo mensile", perMonth: "/mese",
-        yearlyTxt: "Totale annuale", addUserTxt: "Utente aggiuntivo", bdToggle: "Dettaglio del calcolo",
+        yearlyTxt: "Totale annuale", semiannualTxt: "Totale semestrale", biennialTxt: "Totale biennale", triennialTxt: "Totale triennale",
+        addUserTxt: "Utente aggiuntivo", bdToggle: "Dettaglio del calcolo",
         receiptHeader: "Skello \u2014 Dettaglio della tariffazione", subtotal: "Subtotale",
         footer: "Strumento interno per i team commerciali",
         empl: "dipendenti",
         catFR: "Francia (FR)", catES: "Spagna (ES)", catIT: "Italia (IT)",
         discountApplied: "di sconto applicato",
-        packNames: { planning_standard: "Pianificazione Standard", planning_max: "Pianificazione Max", badgeuse_standard: "Timbratura Standard", badgeuse_max: "Timbratura Max", duo_standard: "Duo Standard", duo_max: "Duo Max" }
+        packNames: { planning_standard: "Gestione Turni Standard", planning_max: "Gestione Turni Max", badgeuse_standard: "Rilevazione Presenze Standard", badgeuse_max: "Rilevazione Presenze Max", duo_standard: "Combo Standard", duo_max: "Combo Max" }
     }
 };
 
@@ -1116,9 +1152,9 @@ function switchLang(lang) {
         const catKey = 'cat' + p.dataset.value;
         if (t[catKey]) p.textContent = t[catKey];
     });
-    // Show catalog only in English
+    // Hide catalog for all languages — auto-selected based on lang
     const catalogGroup = document.getElementById('catalog-pills').closest('.form-group');
-    catalogGroup.style.display = (lang === 'en') ? '' : 'none';
+    catalogGroup.style.display = 'none';
     document.title = `Skello - ${t.titleMain} ${t.titleAccent}`;
     // Auto-switch catalog based on lang
     if (lang === 'es') setActivePill('catalog-pills', 'ES');
