@@ -256,17 +256,10 @@
         .slider-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
         .slider-header .form-label { margin: 0; }
         .slider-value {
-            font-size: 24px; font-weight: 800; min-width: 60px; text-align: right;
+            font-size: 15px; font-weight: 700; min-width: 60px; text-align: right;
             background: linear-gradient(135deg, var(--indigo), var(--sky));
             -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-            cursor: pointer; position: relative;
-        }
-        .slider-value:hover { opacity: 0.8; }
-        .slider-value-input {
-            font-size: 24px; font-weight: 800; width: 90px; text-align: right;
-            background: linear-gradient(135deg, var(--indigo), var(--sky));
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-            border: none; border-bottom: 2px solid var(--blue); outline: none;
+            position: relative; white-space: nowrap;
             font-family: inherit; padding: 0;
         }
         .slider-wrap { position: relative; width: 100%; height: 28px; display: flex; align-items: center; }
@@ -547,8 +540,8 @@
             </div>
             <div class="form-group slider-group">
                 <div class="slider-header">
-                    <label class="form-label" data-i18n="labelEmployees">Nombre d'employ&eacute;s total</label>
-                    <span class="slider-value" id="employees-display">20</span>
+                    <label class="form-label" data-i18n="labelEmployees">Tranche d'employ&eacute;s</label>
+                    <span class="slider-value" id="employees-display">Jusqu'&agrave; 20 employ&eacute;s</span>
                 </div>
                 <div class="slider-wrap">
                     <input type="range" id="employees" value="300" min="0" max="1000" step="1">
@@ -951,94 +944,40 @@ function getPackName() {
 }
 
 // =============================================
-// LOGARITHMIC SLIDER (1 → 10,000)
+// TRANCHE SLIDER (discrete steps by pricing grid)
 // =============================================
-const EMP_MIN = 1, EMP_MAX = 10000;
-
-function sliderToEmployees(sliderVal) {
-    // Map 0-1000 → 1-10000 logarithmically
-    const t = sliderVal / 1000;
-    return Math.round(EMP_MIN * Math.pow(EMP_MAX / EMP_MIN, t));
-}
-
-function employeesToSlider(emp) {
-    // Inverse: employees → slider position
-    if (emp <= EMP_MIN) return 0;
-    if (emp >= EMP_MAX) return 1000;
-    return Math.round(1000 * Math.log(emp / EMP_MIN) / Math.log(EMP_MAX / EMP_MIN));
-}
+const TRANCHES = GRID_FR.filter(r => r[0] !== Infinity).map(r => r[0]);
+// TRANCHES = [5, 10, 20, 30, 40, ..., 10000]
 
 let currentEmployees = 20;
 
+function updateEmployeeDisplay() {
+    const t = I18N[currentLang];
+    const display = document.getElementById('employees-display');
+    if (display) {
+        display.textContent = `${t.upTo || "Jusqu'\u00E0"} ${currentEmployees.toLocaleString('fr-FR')} ${t.empl}`;
+    }
+}
+
 function updateSliderTrack(slider) {
-    const pct = (slider.value / 1000) * 100;
+    const pct = (slider.value / (TRANCHES.length - 1)) * 100;
     slider.style.background = `linear-gradient(to right, #2E26F2 0%, #50A5FF ${pct}%, #E2E8F0 ${pct}%, #E2E8F0 100%)`;
 }
 
 const empSlider = document.getElementById('employees');
-
-// Set initial position for 20 employees
-empSlider.value = employeesToSlider(20);
-document.getElementById('employees-display').textContent = '20';
+empSlider.min = 0;
+empSlider.max = TRANCHES.length - 1;
+empSlider.step = 1;
+empSlider.value = TRANCHES.indexOf(20); // index 2
 
 empSlider.addEventListener('input', function() {
-    currentEmployees = sliderToEmployees(parseInt(this.value));
-    // Always query live DOM — the span is replaced when user edits inline
-    const liveDisplay = document.getElementById('employees-display');
-    if (liveDisplay) liveDisplay.textContent = currentEmployees.toLocaleString('fr-FR');
+    const idx = parseInt(this.value);
+    currentEmployees = TRANCHES[idx] || TRANCHES[0];
+    updateEmployeeDisplay();
     updateSliderTrack(this);
     calculate();
 });
 updateSliderTrack(empSlider);
-
-// Click on value → editable input (event delegation)
-document.querySelector('.slider-header').addEventListener('click', function(e) {
-    const display = e.target.closest('.slider-value');
-    if (!display || display.tagName === 'INPUT') return;
-
-    const currentVal = currentEmployees;
-    const input = document.createElement('input');
-    input.type = 'number';
-    input.className = 'slider-value-input';
-    input.value = currentVal;
-    input.min = EMP_MIN;
-    input.max = EMP_MAX;
-    display.replaceWith(input);
-    input.focus();
-    input.select();
-
-    function commitValue() {
-        let v = parseInt(input.value) || 1;
-        const raw = v;
-        v = Math.max(EMP_MIN, Math.min(EMP_MAX, v));
-        // Flash feedback if value was clamped
-        if (raw !== v) {
-            input.value = v;
-            input.style.color = '#e74c3c';
-            input.style.webkitTextFillColor = '#e74c3c';
-            setTimeout(() => doReplace(), 350);
-            return;
-        }
-        doReplace();
-        function doReplace() {
-            currentEmployees = v;
-            const span = document.createElement('span');
-            span.className = 'slider-value';
-            span.id = 'employees-display';
-            span.textContent = v.toLocaleString('fr-FR');
-            input.replaceWith(span);
-            empSlider.value = employeesToSlider(v);
-            updateSliderTrack(empSlider);
-            calculate();
-        }
-    }
-
-    input.addEventListener('blur', commitValue);
-    input.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
-        if (e.key === 'Escape') { input.value = currentVal; input.blur(); }
-    });
-});
 
 // Header scroll effect
 window.addEventListener('scroll', () => {
@@ -1052,7 +991,8 @@ const I18N = {
     fr: {
         titleMain: "Simulateur", titleAccent: "de prix",
         configTitle: "Configuration", labelPack: "Offre", labelOption: "Option", labelCatalog: "Catalogue",
-        labelEmployees: "Nombre d'employ\u00E9s total", labelWorkspaces: "Espace de travail", labelFreq: "Fr\u00E9quence",
+        labelEmployees: "Tranche d'employ\u00E9s",
+        upTo: "Jusqu'\u00E0", labelWorkspaces: "Espace de travail", labelFreq: "Fr\u00E9quence",
         labelDiscount: "R\u00E9duction",
         fMonthly: "Mensuel", fYearly: "Annuel", fSemiannual: "Semestriel", fBiennial: "Tous les 2 ans", fTriennial: "Tous les 3 ans",
         optNone: "Aucune", optRhExpert: "RH Expert",
@@ -1070,7 +1010,8 @@ const I18N = {
     en: {
         titleMain: "Price", titleAccent: "simulator",
         configTitle: "Configuration", labelPack: "Plan", labelOption: "Option", labelCatalog: "Catalog",
-        labelEmployees: "Total number of employees", labelWorkspaces: "Workspace", labelFreq: "Frequency",
+        labelEmployees: "Employee bracket",
+        upTo: "Up to", labelWorkspaces: "Workspace", labelFreq: "Frequency",
         labelDiscount: "Discount",
         fMonthly: "Monthly", fYearly: "Yearly", fSemiannual: "Semi-annual", fBiennial: "Biennial", fTriennial: "Triennial",
         optNone: "None", optRhExpert: "HR Expert",
@@ -1088,7 +1029,8 @@ const I18N = {
     es: {
         titleMain: "Simulador", titleAccent: "de precios",
         configTitle: "Configuraci\u00F3n", labelPack: "Oferta", labelOption: "Opci\u00F3n", labelCatalog: "Cat\u00E1logo",
-        labelEmployees: "N\u00FAmero total de empleados", labelWorkspaces: "Espacio de trabajo", labelFreq: "Frecuencia",
+        labelEmployees: "Tramo de empleados",
+        upTo: "Hasta", labelWorkspaces: "Espacio de trabajo", labelFreq: "Frecuencia",
         labelDiscount: "Descuento",
         fMonthly: "Mensual", fYearly: "Anual", fSemiannual: "Semestral", fBiennial: "Bienal", fTriennial: "Trienal",
         optNone: "Ninguna", optRhExpert: "Experto RRHH",
@@ -1106,7 +1048,8 @@ const I18N = {
     it: {
         titleMain: "Simulatore", titleAccent: "di prezzi",
         configTitle: "Configurazione", labelPack: "Offerta", labelOption: "Opzione", labelCatalog: "Catalogo",
-        labelEmployees: "Numero totale di dipendenti", labelWorkspaces: "Spazio di lavoro", labelFreq: "Frequenza",
+        labelEmployees: "Fascia di dipendenti",
+        upTo: "Fino a", labelWorkspaces: "Spazio di lavoro", labelFreq: "Frequenza",
         labelDiscount: "Sconto",
         fMonthly: "Mensile", fYearly: "Annuale", fSemiannual: "Semestrale", fBiennial: "Biennale", fTriennial: "Triennale",
         optNone: "Nessuna", optRhExpert: "HR Esperto",
@@ -1161,6 +1104,7 @@ function switchLang(lang) {
     else if (lang === 'it') setActivePill('catalog-pills', 'IT');
     else setActivePill('catalog-pills', 'FR');
     calculate();
+    updateEmployeeDisplay();
 }
 
 // =============================================
