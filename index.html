@@ -292,8 +292,17 @@
         }
         .slider-wrap input[type="range"]::-moz-range-track { height: 6px; border-radius: 6px; background: var(--g200); }
 
+        /* SECRET TOGGLE */
+        .secret-toggle { position: relative; display: inline-flex; cursor: pointer; }
+        .secret-toggle input { position: absolute; opacity: 0; width: 0; height: 0; }
+        .toggle-track { width: 36px; height: 20px; background: var(--g200); border-radius: 20px; position: relative; transition: background 0.25s; }
+        .toggle-thumb { width: 16px; height: 16px; background: #fff; border-radius: 50%; position: absolute; top: 2px; left: 2px; transition: transform 0.25s; box-shadow: 0 1px 3px rgba(0,0,0,.15); }
+        .secret-toggle input:checked + .toggle-track { background: var(--blue); }
+        .secret-toggle input:checked + .toggle-track .toggle-thumb { transform: translateX(16px); }
+
         /* DISCOUNT INPUT IN RESULT CARD */
-        .discount-input-row { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+        .discount-input-row { display: none; align-items: center; gap: 12px; margin-bottom: 16px; }
+        .discount-input-row.vis { display: flex; }
         /* Original price (strikethrough) */
         .val-original { font-size: 13px; font-weight: 500; color: var(--g400); text-decoration: line-through; margin-top: 4px; min-height: 20px; }
         .discount-wrap { position: relative; width: 110px; }
@@ -304,6 +313,7 @@
         .discount-wrap input:hover { border-color: var(--g300); }
         .discount-wrap input:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 4px var(--blue-glow); }
         .discount-wrap .sfx { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); font-size: 13px; color: var(--g400); font-weight: 600; }
+        .max-discount-tag { font-size: 12px; font-weight: 600; color: var(--blue); background: var(--blue-glow); padding: 4px 10px; border-radius: 20px; white-space: nowrap; }
 
         /* ═══════════════════════════════════════════════
            RESULT CARD — Hero Section
@@ -479,6 +489,7 @@
             <button class="lang-btn" data-lang="es">ES</button>
             <button class="lang-btn" data-lang="it">IT</button>
         </div>
+        <label class="secret-toggle" title="Réduction"><input type="checkbox" id="toggle-discount"><span class="toggle-track"><span class="toggle-thumb"></span></span></label>
         <div class="user-info" id="user-info" style="display:none;">
             <img class="user-avatar" id="user-avatar" src="" alt="">
             <span class="user-name" id="user-name"></span>
@@ -584,9 +595,10 @@
             <div class="discount-input-row">
                 <span class="form-label" data-i18n="labelDiscount">R&eacute;duction</span>
                 <div class="discount-wrap">
-                    <input type="number" id="discount" value="0" min="0" max="100" step="0.5">
+                    <input type="number" id="discount" value="0" min="0" max="0" step="0.5">
                     <span class="sfx">%</span>
                 </div>
+                <span class="max-discount-tag" id="max-discount-label">Max : 0%</span>
             </div>
             <div class="discount-badge" id="d-badge"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span id="d-badge-txt"></span></div>
             <hr class="divider">
@@ -729,6 +741,31 @@ const ADD_USER_RH = 2;
 const COL = { planning_standard:1, planning_max:2, badgeuse_standard:3, badgeuse_max:4, duo_standard:5, duo_max:6, rh_expert:7 };
 const WS_PRICE = 40;
 
+// MAX DISCOUNT GRIDS (frequency + workspaces, additive)
+const FREQ_DISCOUNT = { monthly: 0, semiannual: 5, yearly: 10, biennial: 15, triennial: 15 };
+const WS_DISCOUNT = [ [2, 0], [4, 5], [9, 7.5], [24, 10], [49, 12.5], [Infinity, 15] ];
+
+function getWsDiscount(ws) {
+    for (const [max, d] of WS_DISCOUNT) { if (ws <= max) return d; }
+    return 15;
+}
+
+function getMaxDiscount() {
+    const freq = document.getElementById('frequency').value;
+    const ws = Math.max(1, parseInt(document.getElementById('workspaces').value) || 1);
+    return FREQ_DISCOUNT[freq] + getWsDiscount(ws);
+}
+
+function enforceMaxDiscount() {
+    const maxD = getMaxDiscount();
+    const discInput = document.getElementById('discount');
+    discInput.max = maxD;
+    if (parseFloat(discInput.value) > maxD) discInput.value = maxD;
+    const maxLabel = document.getElementById('max-discount-label');
+    if (maxLabel) maxLabel.textContent = `Max : ${maxD}%`;
+    calculate();
+}
+
 // =============================================
 // COUNT-UP ANIMATION
 // =============================================
@@ -850,7 +887,8 @@ function calculate() {
     document.getElementById('r-adduser').textContent = `${addUser} \u20AC`;
 
     const badge = document.getElementById('d-badge');
-    if (disc > 0) { badge.classList.add('vis'); document.getElementById('d-badge-txt').textContent = `${disc}% ${t2.discountApplied}`; }
+    const toggleOn = document.getElementById('toggle-discount').checked;
+    if (disc > 0 && toggleOn) { badge.classList.add('vis'); document.getElementById('d-badge-txt').textContent = `${disc}% ${t2.discountApplied}`; }
     else { badge.classList.remove('vis'); }
 
     // Breakdown (receipt format)
@@ -893,6 +931,7 @@ function adj(id, d) {
     const el = document.getElementById(id);
     const v = Math.max(parseInt(el.min)||1, Math.min(parseInt(el.max)||10000, (parseInt(el.value)||1)+d));
     el.value = v;
+    if (id === 'workspaces') { enforceMaxDiscount(); return; }
     calculate();
 }
 
@@ -912,7 +951,7 @@ function initPillGroup(groupId, hiddenId) {
             group.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
             pill.classList.add('active');
             hidden.value = pill.dataset.value;
-            // Auto-switch catalog when language forces it
+            if (groupId === 'frequency-pills') { enforceMaxDiscount(); return; }
             calculate();
         });
     });
@@ -1111,13 +1150,34 @@ function switchLang(lang) {
 // LISTENERS
 // =============================================
 document.querySelectorAll('input[type="number"]').forEach(el => {
-    el.addEventListener('change', calculate);
-    el.addEventListener('input', calculate);
+    el.addEventListener('change', () => {
+        if (el.id === 'workspaces') { enforceMaxDiscount(); return; }
+        calculate();
+    });
+    el.addEventListener('input', () => {
+        if (el.id === 'workspaces') { enforceMaxDiscount(); return; }
+        calculate();
+    });
 });
 document.getElementById('discount').addEventListener('input', calculate);
 document.querySelectorAll('.lang-btn').forEach(b => b.addEventListener('click', () => switchLang(b.dataset.lang)));
 
+// Secret toggle: show/hide discount section
+document.getElementById('toggle-discount').addEventListener('change', function() {
+    const discRow = document.querySelector('.discount-input-row');
+    const dBadge = document.getElementById('d-badge');
+    if (this.checked) {
+        discRow.classList.add('vis');
+    } else {
+        discRow.classList.remove('vis');
+        document.getElementById('discount').value = 0;
+        dBadge.classList.remove('vis');
+        calculate();
+    }
+});
+
 switchLang('fr');
+enforceMaxDiscount();
 
 // =============================================
 // GOOGLE OAUTH — AUTH GATE
