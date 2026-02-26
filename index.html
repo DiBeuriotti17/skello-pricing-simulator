@@ -762,7 +762,8 @@ function enforceMaxDiscount() {
     discInput.max = maxD;
     if (parseFloat(discInput.value) > maxD) discInput.value = maxD;
     const maxLabel = document.getElementById('max-discount-label');
-    if (maxLabel) maxLabel.textContent = `Max : ${maxD}%`;
+    const t = I18N[currentLang];
+    if (maxLabel) maxLabel.textContent = `${t.maxDiscount || 'Max'} : ${maxD}%`;
     calculate();
 }
 
@@ -1044,6 +1045,7 @@ const I18N = {
         empl: "employ\u00E9s",
         catFR: "France (FR)", catES: "Espagne (ES)", catIT: "Italie (IT)",
         discountApplied: "de r\u00E9duction appliqu\u00E9e",
+        maxDiscount: "Max",
         packNames: { planning_standard: "Planning Standard", planning_max: "Planning Max", badgeuse_standard: "Badgeuse Standard", badgeuse_max: "Badgeuse Max", duo_standard: "Duo Standard", duo_max: "Duo Max" }
     },
     en: {
@@ -1063,6 +1065,7 @@ const I18N = {
         empl: "employees",
         catFR: "France (FR)", catES: "Spain (ES)", catIT: "Italy (IT)",
         discountApplied: "discount applied",
+        maxDiscount: "Max",
         packNames: { planning_standard: "Planning Standard", planning_max: "Planning Max", badgeuse_standard: "Timeclock Standard", badgeuse_max: "Timeclock Max", duo_standard: "Duo Standard", duo_max: "Duo Max" }
     },
     es: {
@@ -1082,6 +1085,7 @@ const I18N = {
         empl: "empleados",
         catFR: "Francia (FR)", catES: "Espa\u00F1a (ES)", catIT: "Italia (IT)",
         discountApplied: "de descuento aplicado",
+        maxDiscount: "M\u00E1x",
         packNames: { planning_standard: "Planificaci\u00F3n Est\u00E1ndar", planning_max: "Planificaci\u00F3n Max", badgeuse_standard: "Fichaje Est\u00E1ndar", badgeuse_max: "Fichaje Max", duo_standard: "Duo Est\u00E1ndar", duo_max: "Duo Max" }
     },
     it: {
@@ -1101,6 +1105,7 @@ const I18N = {
         empl: "dipendenti",
         catFR: "Francia (FR)", catES: "Spagna (ES)", catIT: "Italia (IT)",
         discountApplied: "di sconto applicato",
+        maxDiscount: "Max",
         packNames: { planning_standard: "Gestione Turni Standard", planning_max: "Gestione Turni Max", badgeuse_standard: "Rilevazione Presenze Standard", badgeuse_max: "Rilevazione Presenze Max", duo_standard: "Combo Standard", duo_max: "Combo Max" }
     }
 };
