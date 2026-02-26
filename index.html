@@ -314,6 +314,8 @@
         .discount-wrap input:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 4px var(--blue-glow); }
         .discount-wrap .sfx { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); font-size: 13px; color: var(--g400); font-weight: 600; }
         .max-discount-tag { font-size: 12px; font-weight: 600; color: var(--blue); background: var(--blue-glow); padding: 4px 10px; border-radius: 20px; white-space: nowrap; }
+        .discount-limit-msg { font-size: 12px; font-weight: 500; color: #e65100; background: #fff3e0; border: 1px solid #ffe0b2; border-radius: var(--r-md); padding: 8px 12px; margin-bottom: 8px; display: none; line-height: 1.4; }
+        .discount-limit-msg.vis { display: block; }
 
         /* ═══════════════════════════════════════════════
            RESULT CARD — Hero Section
@@ -600,6 +602,7 @@
                 </div>
                 <span class="max-discount-tag" id="max-discount-label">Max : 0%</span>
             </div>
+            <div class="discount-limit-msg" id="discount-limit-msg"></div>
             <div class="discount-badge" id="d-badge"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span id="d-badge-txt"></span></div>
             <hr class="divider">
             <div class="total-box">
@@ -759,12 +762,27 @@ function getMaxDiscount() {
 function enforceMaxDiscount() {
     const maxD = getMaxDiscount();
     const discInput = document.getElementById('discount');
+    const curVal = parseFloat(discInput.value) || 0;
     discInput.max = maxD;
-    if (parseFloat(discInput.value) > maxD) discInput.value = maxD;
+    if (curVal > maxD) discInput.value = maxD;
     const maxLabel = document.getElementById('max-discount-label');
     const t = I18N[currentLang];
     if (maxLabel) maxLabel.textContent = `${t.maxDiscount || 'Max'} : ${maxD}%`;
+    updateDiscountLimitMsg();
     calculate();
+}
+
+function updateDiscountLimitMsg() {
+    const maxD = getMaxDiscount();
+    const curVal = parseFloat(document.getElementById('discount').value) || 0;
+    const msg = document.getElementById('discount-limit-msg');
+    const t = I18N[currentLang];
+    if (curVal >= maxD && maxD > 0) {
+        msg.textContent = t.discountLimitReached || "Remise maximale atteinte pour cette configuration.";
+        msg.classList.add('vis');
+    } else {
+        msg.classList.remove('vis');
+    }
 }
 
 // =============================================
@@ -1046,6 +1064,7 @@ const I18N = {
         catFR: "France (FR)", catES: "Espagne (ES)", catIT: "Italie (IT)",
         discountApplied: "de r\u00E9duction appliqu\u00E9e",
         maxDiscount: "Max",
+        discountLimitReached: "Remise maximale atteinte pour cette configuration.",
         packNames: { planning_standard: "Planning Standard", planning_max: "Planning Max", badgeuse_standard: "Badgeuse Standard", badgeuse_max: "Badgeuse Max", duo_standard: "Duo Standard", duo_max: "Duo Max" }
     },
     en: {
@@ -1066,6 +1085,7 @@ const I18N = {
         catFR: "France (FR)", catES: "Spain (ES)", catIT: "Italy (IT)",
         discountApplied: "discount applied",
         maxDiscount: "Max",
+        discountLimitReached: "Maximum discount reached for this configuration.",
         packNames: { planning_standard: "Planning Standard", planning_max: "Planning Max", badgeuse_standard: "Timeclock Standard", badgeuse_max: "Timeclock Max", duo_standard: "Duo Standard", duo_max: "Duo Max" }
     },
     es: {
@@ -1086,6 +1106,7 @@ const I18N = {
         catFR: "Francia (FR)", catES: "Espa\u00F1a (ES)", catIT: "Italia (IT)",
         discountApplied: "de descuento aplicado",
         maxDiscount: "M\u00E1x",
+        discountLimitReached: "Descuento m\u00E1ximo alcanzado para esta configuraci\u00F3n.",
         packNames: { planning_standard: "Planificaci\u00F3n Est\u00E1ndar", planning_max: "Planificaci\u00F3n Max", badgeuse_standard: "Fichaje Est\u00E1ndar", badgeuse_max: "Fichaje Max", duo_standard: "Duo Est\u00E1ndar", duo_max: "Duo Max" }
     },
     it: {
@@ -1106,6 +1127,7 @@ const I18N = {
         catFR: "Francia (FR)", catES: "Spagna (ES)", catIT: "Italia (IT)",
         discountApplied: "di sconto applicato",
         maxDiscount: "Max",
+        discountLimitReached: "Sconto massimo raggiunto per questa configurazione.",
         packNames: { planning_standard: "Gestione Turni Standard", planning_max: "Gestione Turni Max", badgeuse_standard: "Rilevazione Presenze Standard", badgeuse_max: "Rilevazione Presenze Max", duo_standard: "Combo Standard", duo_max: "Combo Max" }
     }
 };
@@ -1164,7 +1186,7 @@ document.querySelectorAll('input[type="number"]').forEach(el => {
         calculate();
     });
 });
-document.getElementById('discount').addEventListener('input', calculate);
+document.getElementById('discount').addEventListener('input', () => { updateDiscountLimitMsg(); calculate(); });
 document.querySelectorAll('.lang-btn').forEach(b => b.addEventListener('click', () => switchLang(b.dataset.lang)));
 
 // Secret toggle: show/hide discount section
