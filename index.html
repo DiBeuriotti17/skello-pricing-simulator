@@ -313,7 +313,8 @@
         .discount-wrap input:hover { border-color: var(--g300); }
         .discount-wrap input:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 4px var(--blue-glow); }
         .discount-wrap .sfx { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); font-size: 13px; color: var(--g400); font-weight: 600; }
-        .max-discount-tag { font-size: 12px; font-weight: 600; color: var(--blue); background: var(--blue-glow); padding: 4px 10px; border-radius: 20px; white-space: nowrap; }
+        .max-discount-tag { font-size: 12px; font-weight: 600; color: var(--blue); background: var(--blue-glow); padding: 4px 10px; border-radius: 20px; white-space: nowrap; display: none; }
+        .max-discount-tag.vis { display: inline-flex; }
         .discount-limit-msg { font-size: 12px; font-weight: 500; color: #e65100; background: #fff3e0; border: 1px solid #ffe0b2; border-radius: var(--r-md); padding: 8px 12px; margin-bottom: 8px; display: none; line-height: 1.4; }
         .discount-limit-msg.vis { display: block; }
 
@@ -765,9 +766,6 @@ function enforceMaxDiscount() {
     const curVal = parseFloat(discInput.value) || 0;
     discInput.max = maxD;
     if (curVal > maxD) discInput.value = maxD;
-    const maxLabel = document.getElementById('max-discount-label');
-    const t = I18N[currentLang];
-    if (maxLabel) maxLabel.textContent = `${t.maxDiscount || 'Max'} : ${maxD}%`;
     updateDiscountLimitMsg();
     calculate();
 }
@@ -776,12 +774,16 @@ function updateDiscountLimitMsg() {
     const maxD = getMaxDiscount();
     const curVal = parseFloat(document.getElementById('discount').value) || 0;
     const msg = document.getElementById('discount-limit-msg');
+    const maxLabel = document.getElementById('max-discount-label');
     const t = I18N[currentLang];
-    if (curVal >= maxD && maxD > 0) {
+    const atLimit = curVal >= maxD && maxD > 0;
+    if (atLimit) {
         msg.textContent = t.discountLimitReached || "Remise maximale atteinte pour cette configuration.";
         msg.classList.add('vis');
+        if (maxLabel) { maxLabel.textContent = `${t.maxDiscount || 'Max'} : ${maxD}%`; maxLabel.classList.add('vis'); }
     } else {
         msg.classList.remove('vis');
+        if (maxLabel) maxLabel.classList.remove('vis');
     }
 }
 
