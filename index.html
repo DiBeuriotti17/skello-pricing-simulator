@@ -741,11 +741,11 @@ const WS_PRICE = 40;
 
 // MAX DISCOUNT GRIDS (frequency + workspaces, additive)
 const FREQ_DISCOUNT = { monthly: 0, semiannual: 5, yearly: 10, biennial: 15, triennial: 15 };
-const WS_DISCOUNT = [ [2, 0], [4, 5], [9, 7.5], [24, 10], [49, 12.5], [Infinity, 15] ];
+const WS_DISCOUNT = [ [2, 0], [4, 5], [9, 10], [49, 15], [Infinity, 20] ];
 
 function getWsDiscount(ws) {
     for (const [max, d] of WS_DISCOUNT) { if (ws <= max) return d; }
-    return 15;
+    return 20;
 }
 
 function getMaxDiscount() {
