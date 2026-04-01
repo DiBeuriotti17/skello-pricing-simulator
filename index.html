@@ -610,6 +610,7 @@
             <!-- Add user info (always visible) + yearly total when yearly selected -->
             <div class="secondary" id="secondary-info">
                 <span id="yearly-line"><span class="period-label">Total annuel</span> : <strong id="r-yearly">0 &euro;</strong></span>
+                <span id="per-ws-line" style="display:none;"><span id="per-ws-label">Co&ucirc;t mensuel / espace de travail</span> : <strong id="r-per-ws">0 &euro;</strong></span>
                 <span><span data-i18n="addUserTxt">Utilisateur suppl.</span> : <strong id="r-adduser">0 &euro;</strong></span>
             </div>
         </div>
@@ -886,6 +887,17 @@ function calculate() {
     }
     document.getElementById('r-adduser').textContent = `${addUser} \u20AC`;
 
+    // Per-workspace cost line
+    const perWsLine = document.getElementById('per-ws-line');
+    if (workspaces > 1) {
+        const perWs = Math.round(total / workspaces);
+        document.getElementById('r-per-ws').textContent = `${perWs.toLocaleString('fr-FR')} \u20AC`;
+        document.getElementById('per-ws-label').textContent = t2.perWsLabel || "Co\u00FBt mensuel / espace de travail";
+        perWsLine.style.display = '';
+    } else {
+        perWsLine.style.display = 'none';
+    }
+
     const badge = document.getElementById('d-badge');
     const toggleOn = document.getElementById('toggle-discount').checked;
     if (disc > 0 && toggleOn) { badge.classList.add('vis'); document.getElementById('d-badge-txt').textContent = `${disc}% ${t2.discountApplied}`; }
@@ -1039,6 +1051,7 @@ const I18N = {
         totalLabel: "Co\u00FBt mensuel", perMonth: "/mois",
         yearlyTxt: "Total annuel", semiannualTxt: "Total semestriel", biennialTxt: "Total biennal", triennialTxt: "Total triennal",
         addUserTxt: "Utilisateur suppl.", bdToggle: "D\u00E9tail du calcul",
+        perWsLabel: "Co\u00FBt mensuel / espace de travail",
         receiptHeader: "Skello \u2014 D\u00E9tail de la tarification", subtotal: "Sous-total",
         footer: "Outil interne \u00E0 destination des \u00E9quipes commerciales",
         empl: "employ\u00E9s",
@@ -1058,6 +1071,7 @@ const I18N = {
         totalLabel: "Monthly cost", perMonth: "/mo",
         yearlyTxt: "Yearly total", semiannualTxt: "Semi-annual total", biennialTxt: "Biennial total", triennialTxt: "Triennial total",
         addUserTxt: "Additional user", bdToggle: "Pricing breakdown",
+        perWsLabel: "Monthly cost / workspace",
         receiptHeader: "Skello \u2014 Pricing breakdown", subtotal: "Subtotal",
         footer: "Internal tool for sales teams",
         empl: "employees",
@@ -1077,6 +1091,7 @@ const I18N = {
         totalLabel: "Coste mensual", perMonth: "/mes",
         yearlyTxt: "Total anual", semiannualTxt: "Total semestral", biennialTxt: "Total bienal", triennialTxt: "Total trienal",
         addUserTxt: "Usuario adicional", bdToggle: "Detalle del c\u00E1lculo",
+        perWsLabel: "Coste mensual / espacio de trabajo",
         receiptHeader: "Skello \u2014 Detalle de la tarificaci\u00F3n", subtotal: "Subtotal",
         footer: "Herramienta interna para equipos comerciales",
         empl: "empleados",
@@ -1096,6 +1111,7 @@ const I18N = {
         totalLabel: "Costo mensile", perMonth: "/mese",
         yearlyTxt: "Totale annuale", semiannualTxt: "Totale semestrale", biennialTxt: "Totale biennale", triennialTxt: "Totale triennale",
         addUserTxt: "Utente aggiuntivo", bdToggle: "Dettaglio del calcolo",
+        perWsLabel: "Costo mensile / spazio di lavoro",
         receiptHeader: "Skello \u2014 Dettaglio della tariffazione", subtotal: "Subtotale",
         footer: "Strumento interno per i team commerciali",
         empl: "dipendenti",
