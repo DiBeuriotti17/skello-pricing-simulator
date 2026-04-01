@@ -610,8 +610,7 @@
             <!-- Add user info (always visible) + yearly total when yearly selected -->
             <div class="secondary" id="secondary-info">
                 <span id="yearly-line"><span class="period-label">Total annuel</span> : <strong id="r-yearly">0 &euro;</strong></span>
-                <span id="per-ws-line" style="display:none;"><span id="per-ws-label">Co&ucirc;t mensuel / espace de travail</span> : <strong id="r-per-ws">0 &euro;</strong></span>
-                <span><span data-i18n="addUserTxt">Utilisateur suppl.</span> : <strong id="r-adduser">0 &euro;</strong></span>
+<span><span data-i18n="addUserTxt">Utilisateur suppl.</span> : <strong id="r-adduser">0 &euro;</strong></span>
             </div>
         </div>
         <div class="breakdown">
@@ -887,16 +886,6 @@ function calculate() {
     }
     document.getElementById('r-adduser').textContent = `${addUser} \u20AC`;
 
-    // Per-workspace cost line
-    const perWsLine = document.getElementById('per-ws-line');
-    if (workspaces > 1) {
-        const perWs = Math.round(total / workspaces);
-        document.getElementById('r-per-ws').textContent = `${perWs.toLocaleString('fr-FR')} \u20AC`;
-        document.getElementById('per-ws-label').textContent = t2.perWsLabel || "Co\u00FBt mensuel / espace de travail";
-        perWsLine.style.display = '';
-    } else {
-        perWsLine.style.display = 'none';
-    }
 
     const badge = document.getElementById('d-badge');
     const toggleOn = document.getElementById('toggle-discount').checked;
@@ -931,6 +920,10 @@ function calculate() {
     if (freq !== 'monthly' && periodMultipliersR[freq]) {
         const periodTotal = finalTotal * periodMultipliersR[freq];
         rows += `<div class="receipt-subtotal"><div>${t[periodTxtKeysR[freq]]}</div><div class="rl-amount">${periodTotal.toLocaleString('fr-FR')} \u20AC</div></div>`;
+    }
+    if (workspaces > 1) {
+        const perWs = (finalTotal / workspaces).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        rows += `<div class="receipt-subtotal"><div>${t.perWsLabel || "Co\u00FBt mensuel / espace de travail"}</div><div class="rl-amount">${perWs} \u20AC</div></div>`;
     }
     rows += `<div class="receipt-footer">${employees} ${t.empl} \u00B7 ${workspaces} ${t.rWs.toLowerCase()} \u00B7 ${packName}</div>`;
     document.getElementById('bd-body').innerHTML = rows;
