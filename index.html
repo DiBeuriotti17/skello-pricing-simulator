@@ -922,8 +922,10 @@ function calculate() {
         rows += `<div class="receipt-subtotal"><div>${t[periodTxtKeysR[freq]]}</div><div class="rl-amount">${periodTotal.toLocaleString('fr-FR')} \u20AC</div></div>`;
     }
     if (workspaces > 1) {
-        const perWs = (finalTotal / workspaces).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        rows += `<div class="receipt-subtotal"><div>${t.perWsLabel || "Co\u00FBt mensuel / espace de travail"}</div><div class="rl-amount">${perWs} \u20AC</div></div>`;
+        const mult = periodMultipliersR[freq] || 1;
+        const perWsAmount = (finalTotal * mult / workspaces).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const costLabel = freq === 'monthly' ? t.totalLabel : (t[periodTxtKeysR[freq]] || t.totalLabel);
+        rows += `<div class="receipt-subtotal"><div>${costLabel} / ${t.rWs.toLowerCase()}</div><div class="rl-amount">${perWsAmount} \u20AC</div></div>`;
     }
     rows += `<div class="receipt-footer">${employees} ${t.empl} \u00B7 ${workspaces} ${t.rWs.toLowerCase()} \u00B7 ${packName}</div>`;
     document.getElementById('bd-body').innerHTML = rows;
@@ -1044,7 +1046,6 @@ const I18N = {
         totalLabel: "Co\u00FBt mensuel", perMonth: "/mois",
         yearlyTxt: "Total annuel", semiannualTxt: "Total semestriel", biennialTxt: "Total biennal", triennialTxt: "Total triennal",
         addUserTxt: "Utilisateur suppl.", bdToggle: "D\u00E9tail du calcul",
-        perWsLabel: "Co\u00FBt mensuel / espace de travail",
         receiptHeader: "Skello \u2014 D\u00E9tail de la tarification", subtotal: "Sous-total",
         footer: "Outil interne \u00E0 destination des \u00E9quipes commerciales",
         empl: "employ\u00E9s",
@@ -1064,7 +1065,6 @@ const I18N = {
         totalLabel: "Monthly cost", perMonth: "/mo",
         yearlyTxt: "Yearly total", semiannualTxt: "Semi-annual total", biennialTxt: "Biennial total", triennialTxt: "Triennial total",
         addUserTxt: "Additional user", bdToggle: "Pricing breakdown",
-        perWsLabel: "Monthly cost / workspace",
         receiptHeader: "Skello \u2014 Pricing breakdown", subtotal: "Subtotal",
         footer: "Internal tool for sales teams",
         empl: "employees",
@@ -1084,7 +1084,6 @@ const I18N = {
         totalLabel: "Coste mensual", perMonth: "/mes",
         yearlyTxt: "Total anual", semiannualTxt: "Total semestral", biennialTxt: "Total bienal", triennialTxt: "Total trienal",
         addUserTxt: "Usuario adicional", bdToggle: "Detalle del c\u00E1lculo",
-        perWsLabel: "Coste mensual / espacio de trabajo",
         receiptHeader: "Skello \u2014 Detalle de la tarificaci\u00F3n", subtotal: "Subtotal",
         footer: "Herramienta interna para equipos comerciales",
         empl: "empleados",
@@ -1104,7 +1103,6 @@ const I18N = {
         totalLabel: "Costo mensile", perMonth: "/mese",
         yearlyTxt: "Totale annuale", semiannualTxt: "Totale semestrale", biennialTxt: "Totale biennale", triennialTxt: "Totale triennale",
         addUserTxt: "Utente aggiuntivo", bdToggle: "Dettaglio del calcolo",
-        perWsLabel: "Costo mensile / spazio di lavoro",
         receiptHeader: "Skello \u2014 Dettaglio della tariffazione", subtotal: "Subtotale",
         footer: "Strumento interno per i team commerciali",
         empl: "dipendenti",
