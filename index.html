@@ -880,7 +880,7 @@ function calculate() {
     if (freq !== 'monthly' && periodMultipliers[freq]) {
         yearlyLine.style.display = '';
         document.querySelector('#yearly-line .period-label').textContent = t2[periodTxtKeys[freq]] || t2.yearlyTxt;
-        document.getElementById('r-yearly').textContent = `${(total * periodMultipliers[freq]).toLocaleString('fr-FR')} \u20AC`;
+        document.getElementById('r-yearly').textContent = `${(total * periodMultipliers[freq]).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} \u20AC`;
     } else {
         yearlyLine.style.display = 'none';
     }
@@ -919,7 +919,7 @@ function calculate() {
     const periodTxtKeysR = { semiannual: 'semiannualTxt', yearly: 'yearlyTxt', biennial: 'biennialTxt', triennial: 'triennialTxt' };
     if (freq !== 'monthly' && periodMultipliersR[freq]) {
         const periodTotal = finalTotal * periodMultipliersR[freq];
-        rows += `<div class="receipt-subtotal"><div>${t[periodTxtKeysR[freq]]}</div><div class="rl-amount">${periodTotal.toLocaleString('fr-FR')} \u20AC</div></div>`;
+        rows += `<div class="receipt-subtotal"><div>${t[periodTxtKeysR[freq]]}</div><div class="rl-amount">${periodTotal.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} \u20AC</div></div>`;
     }
     if (workspaces > 1) {
         const mult = periodMultipliersR[freq] || 1;
