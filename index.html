@@ -737,7 +737,8 @@ const ADD_USER_FR = { planning_standard:6, planning_max:8, badgeuse_standard:2, 
 const ADD_USER_ESIT = { planning_standard:4, planning_max:6, badgeuse_standard:2, badgeuse_max:4, duo_standard:6, duo_max:8 };
 const ADD_USER_RH = 2;
 const COL = { planning_standard:1, planning_max:2, badgeuse_standard:3, badgeuse_max:4, duo_standard:5, duo_max:6, rh_expert:7 };
-const WS_PRICE = 40;
+const WS_PRICE_FR = 40;
+const WS_PRICE_ESIT = 30;
 
 // MAX DISCOUNT GRIDS (frequency + workspaces, additive)
 const FREQ_DISCOUNT = { monthly: 0, semiannual: 5, yearly: 10, biennial: 15, triennial: 15 };
@@ -833,7 +834,8 @@ function calculate() {
 
     const packPrice = lookupPrice(employees, packKey, catalog);
     const optionPrice = optionKey === 'rh_expert' ? lookupPrice(employees, 'rh_expert', catalog) : 0;
-    const wsTotal = WS_PRICE * workspaces;
+    const wsPrice = (catalog === 'ES' || catalog === 'IT') ? WS_PRICE_ESIT : WS_PRICE_FR;
+    const wsTotal = wsPrice * workspaces;
 
     const subtotal = packPrice + optionPrice + wsTotal;
     const discAmt = Math.round(subtotal * disc / 100);
@@ -903,7 +905,7 @@ function calculate() {
         const optName = t.optRhExpert || 'RH Expert';
         rows += `<div class="receipt-line"><div class="rl-label">${optName}<span class="rl-detail">${bracketLabel} ${t.empl}</span></div><div class="rl-amount">${optionPrice.toLocaleString('fr-FR')} \u20AC</div></div>`;
     }
-    rows += `<div class="receipt-line"><div class="rl-label">${t.rWs}<span class="rl-detail">${workspaces} \u00D7 ${WS_PRICE} \u20AC</span></div><div class="rl-amount">${wsTotal.toLocaleString('fr-FR')} \u20AC</div></div>`;
+    rows += `<div class="receipt-line"><div class="rl-label">${t.rWs}<span class="rl-detail">${workspaces} \u00D7 ${wsPrice} \u20AC</span></div><div class="rl-amount">${wsTotal.toLocaleString('fr-FR')} \u20AC</div></div>`;
 
     let sub = packPrice + optionPrice + wsTotal;
     rows += `<hr class="receipt-sep">`;
