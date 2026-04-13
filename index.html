@@ -198,6 +198,9 @@
            PILL SELECTOR — Skello Design System
         ═══════════════════════════════════════════════ */
         .pill-group { display: flex; flex-wrap: wrap; gap: 8px; }
+        .freq-select { width: 100%; padding: 10px 14px; border: 1.5px solid var(--g200); border-radius: var(--r-md); font-size: 14px; font-weight: 600; font-family: inherit; background: #fff; color: var(--g900); cursor: pointer; transition: all 0.25s; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; }
+        .freq-select:hover { border-color: var(--g300); }
+        .freq-select:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 4px var(--blue-glow); }
         .pill {
             border-radius: 18px;
             border: 1px solid #DDD;
@@ -539,14 +542,13 @@
             </div>
             <div class="form-group">
                 <label class="form-label" data-i18n="labelFreq">Fr&eacute;quence</label>
-                <div class="pill-group" id="frequency-pills">
-                    <button class="pill active" data-value="monthly" data-i18n="fMonthly">Mensuel</button>
-                    <button class="pill" data-value="semiannual" data-i18n="fSemiannual">Semestriel</button>
-                    <button class="pill" data-value="yearly" data-i18n="fYearly">Annuel</button>
-                    <button class="pill" data-value="biennial" data-i18n="fBiennial">Tous les 2 ans</button>
-                    <button class="pill" data-value="triennial" data-i18n="fTriennial">Tous les 3 ans</button>
-                </div>
-                <input type="hidden" id="frequency" value="monthly">
+                <select class="freq-select" id="frequency">
+                    <option value="monthly" data-i18n-opt="fMonthly">Mensuel</option>
+                    <option value="semiannual" data-i18n-opt="fSemiannual">Semestriel</option>
+                    <option value="yearly" data-i18n-opt="fYearly" selected>Annuel</option>
+                    <option value="biennial" data-i18n-opt="fBiennial">Tous les 2 ans</option>
+                    <option value="triennial" data-i18n-opt="fTriennial">Tous les 3 ans</option>
+                </select>
             </div>
             <div class="form-group slider-group">
                 <div class="slider-header">
@@ -865,6 +867,9 @@ function calculate() {
     document.getElementById('r-opt-wrap').style.display = optionKey === 'none' ? 'none' : '';
 
     const t2 = I18N[currentLang];
+    // Update "Coût mensuel" / "Equivalent coût mensuel" label
+    const totalLabelEl = document.querySelector('[data-i18n="totalLabel"]');
+    if (totalLabelEl) totalLabelEl.textContent = freq === 'monthly' ? t2.totalLabel : t2.eqTotalLabel;
     animateCountUp(total);
 
     // Show strikethrough original total if discount active
@@ -915,7 +920,8 @@ function calculate() {
         rows += `<div class="receipt-line discount"><div class="rl-label">${t.labelDiscount} (${disc}%)</div><div class="rl-amount">- ${d.toLocaleString('fr-FR')} \u20AC</div></div>`;
     }
     const finalTotal = sub - Math.round(sub * disc / 100);
-    rows += `<div class="receipt-total"><div>${t.totalLabel}</div><div>${finalTotal.toLocaleString('fr-FR')} \u20AC / ${perMo}</div></div>`;
+    const receiptTotalLabel = freq === 'monthly' ? t.totalLabel : t.eqTotalLabel;
+    rows += `<div class="receipt-total"><div>${receiptTotalLabel}</div><div>${finalTotal.toLocaleString('fr-FR')} \u20AC / ${perMo}</div></div>`;
     // Period total in receipt
     const periodMultipliersR = { semiannual: 6, yearly: 12, biennial: 24, triennial: 36 };
     const periodTxtKeysR = { semiannual: 'semiannualTxt', yearly: 'yearlyTxt', biennial: 'biennialTxt', triennial: 'triennialTxt' };
@@ -929,6 +935,9 @@ function calculate() {
         const costLabel = freq === 'monthly' ? t.totalLabel : (t[periodTxtKeysR[freq]] || t.totalLabel);
         rows += `<div class="receipt-subtotal"><div>${costLabel} / ${t.rWs.toLowerCase()}</div><div class="rl-amount">${perWsAmount} \u20AC</div></div>`;
     }
+    // Price per employee
+    const perEmpl = (finalTotal / employees).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    rows += `<div class="receipt-subtotal"><div>${t.perEmplLabel || "Co\u00FBt / employ\u00E9"}</div><div class="rl-amount">${perEmpl} \u20AC</div></div>`;
     rows += `<div class="receipt-footer">${employees} ${t.empl} \u00B7 ${workspaces} ${t.rWs.toLowerCase()} \u00B7 ${packName}</div>`;
     document.getElementById('bd-body').innerHTML = rows;
 }
@@ -969,7 +978,11 @@ function initPillGroup(groupId, hiddenId) {
 initPillGroup('pack-pills', 'pack');
 initPillGroup('option-pills', 'option');
 initPillGroup('catalog-pills', 'catalog');
-initPillGroup('frequency-pills', 'frequency');
+
+// Frequency dropdown
+document.getElementById('frequency').addEventListener('change', function() {
+    enforceMaxDiscount();
+});
 
 // Helper: set active pill programmatically
 function setActivePill(groupId, value) {
@@ -1045,7 +1058,8 @@ const I18N = {
         fMonthly: "Mensuel", fYearly: "Annuel", fSemiannual: "Semestriel", fBiennial: "Tous les 2 ans", fTriennial: "Tous les 3 ans",
         optNone: "Aucune", optRhExpert: "RH Expert",
         resultTitle: "Tarification", rPack: "Offre", rOption: "Option RH", rWs: "Espace de travail",
-        totalLabel: "Co\u00FBt mensuel", perMonth: "/mois",
+        totalLabel: "Co\u00FBt mensuel", eqTotalLabel: "Equivalent co\u00FBt mensuel", perMonth: "/mois",
+        perEmplLabel: "Co\u00FBt / employ\u00E9",
         yearlyTxt: "Total annuel", semiannualTxt: "Total semestriel", biennialTxt: "Total biennal", triennialTxt: "Total triennal",
         addUserTxt: "Utilisateur suppl.", bdToggle: "D\u00E9tail du calcul",
         receiptHeader: "Skello \u2014 D\u00E9tail de la tarification", subtotal: "Sous-total",
@@ -1064,7 +1078,8 @@ const I18N = {
         fMonthly: "Monthly", fYearly: "Yearly", fSemiannual: "Semi-annual", fBiennial: "Biennial", fTriennial: "Triennial",
         optNone: "None", optRhExpert: "HR Expert",
         resultTitle: "Pricing", rPack: "Plan", rOption: "HR Option", rWs: "Workspace",
-        totalLabel: "Monthly cost", perMonth: "/mo",
+        totalLabel: "Monthly cost", eqTotalLabel: "Equivalent monthly cost", perMonth: "/mo",
+        perEmplLabel: "Cost / employee",
         yearlyTxt: "Yearly total", semiannualTxt: "Semi-annual total", biennialTxt: "Biennial total", triennialTxt: "Triennial total",
         addUserTxt: "Additional user", bdToggle: "Pricing breakdown",
         receiptHeader: "Skello \u2014 Pricing breakdown", subtotal: "Subtotal",
@@ -1083,7 +1098,8 @@ const I18N = {
         fMonthly: "Mensual", fYearly: "Anual", fSemiannual: "Semestral", fBiennial: "Bienal", fTriennial: "Trienal",
         optNone: "Ninguna", optRhExpert: "Experto RRHH",
         resultTitle: "Tarificaci\u00F3n", rPack: "Oferta", rOption: "Opci\u00F3n RH", rWs: "Espacio de trabajo",
-        totalLabel: "Coste mensual", perMonth: "/mes",
+        totalLabel: "Coste mensual", eqTotalLabel: "Equivalente coste mensual", perMonth: "/mes",
+        perEmplLabel: "Coste / empleado",
         yearlyTxt: "Total anual", semiannualTxt: "Total semestral", biennialTxt: "Total bienal", triennialTxt: "Total trienal",
         addUserTxt: "Usuario adicional", bdToggle: "Detalle del c\u00E1lculo",
         receiptHeader: "Skello \u2014 Detalle de la tarificaci\u00F3n", subtotal: "Subtotal",
@@ -1102,7 +1118,8 @@ const I18N = {
         fMonthly: "Mensile", fYearly: "Annuale", fSemiannual: "Semestrale", fBiennial: "Biennale", fTriennial: "Triennale",
         optNone: "Nessuna", optRhExpert: "HR Esperto",
         resultTitle: "Tariffazione", rPack: "Offerta", rOption: "Opzione RH", rWs: "Spazio di lavoro",
-        totalLabel: "Costo mensile", perMonth: "/mese",
+        totalLabel: "Costo mensile", eqTotalLabel: "Equivalente costo mensile", perMonth: "/mese",
+        perEmplLabel: "Costo / dipendente",
         yearlyTxt: "Totale annuale", semiannualTxt: "Totale semestrale", biennialTxt: "Totale biennale", triennialTxt: "Totale triennale",
         addUserTxt: "Utente aggiuntivo", bdToggle: "Dettaglio del calcolo",
         receiptHeader: "Skello \u2014 Dettaglio della tariffazione", subtotal: "Subtotale",
@@ -1129,9 +1146,9 @@ function switchLang(lang) {
         const k = p.dataset.i18n;
         if (t[k]) p.textContent = t[k];
     });
-    document.querySelectorAll('#frequency-pills .pill[data-i18n]').forEach(p => {
-        const k = p.dataset.i18n;
-        if (t[k]) p.textContent = t[k];
+    document.querySelectorAll('#frequency option[data-i18n-opt]').forEach(o => {
+        const k = o.dataset.i18nOpt;
+        if (t[k]) o.textContent = t[k];
     });
     // Update pack pill labels
     document.querySelectorAll('#pack-pills .pill[data-i18n-pack]').forEach(p => {
