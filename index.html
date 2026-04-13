@@ -758,11 +758,15 @@ function getMaxDiscount() {
 }
 
 function enforceMaxDiscount() {
-    const maxD = getMaxDiscount();
     const discInput = document.getElementById('discount');
-    const curVal = parseFloat(discInput.value) || 0;
-    discInput.max = maxD;
-    if (curVal > maxD) discInput.value = maxD;
+    if (userRole === 'as') {
+        discInput.max = 100;
+    } else {
+        const maxD = getMaxDiscount();
+        const curVal = parseFloat(discInput.value) || 0;
+        discInput.max = maxD;
+        if (curVal > maxD) discInput.value = maxD;
+    }
     calculate();
 }
 
@@ -829,10 +833,10 @@ function calculate() {
     const workspaces = Math.max(1, parseInt(document.getElementById('workspaces').value) || 1);
     const catalog = document.getElementById('catalog').value;
     const freq = document.getElementById('frequency').value;
-    const maxD = getMaxDiscount();
     const discInput = document.getElementById('discount');
-    let disc = Math.min(maxD, Math.max(0, parseFloat(discInput.value) || 0));
-    if (parseFloat(discInput.value) > maxD) discInput.value = maxD;
+    const capAt = userRole === 'as' ? 100 : getMaxDiscount();
+    let disc = Math.min(capAt, Math.max(0, parseFloat(discInput.value) || 0));
+    if (parseFloat(discInput.value) > capAt) discInput.value = capAt;
 
     const packPrice = lookupPrice(employees, packKey, catalog);
     const optionPrice = optionKey === 'rh_expert' ? lookupPrice(employees, 'rh_expert', catalog) : 0;
@@ -1211,6 +1215,20 @@ enforceMaxDiscount();
 const GOOGLE_CLIENT_ID = '261796576867-800anci88p7h80srjqd3jhb6kmfar5g3.apps.googleusercontent.com';
 const ALLOWED_DOMAINS = ['skello.io', 'skello.es'];
 const SESSION_KEY = 'skello_pricing_session';
+const ROLE_KEY = 'skello_user_role';
+let userRole = sessionStorage.getItem(ROLE_KEY) || 'sales';
+
+async function fetchUserRole(email) {
+    try {
+        const res = await fetch(`/api/check-role?email=${encodeURIComponent(email)}`);
+        const data = await res.json();
+        userRole = data.role || 'sales';
+    } catch (e) {
+        userRole = 'sales';
+    }
+    sessionStorage.setItem(ROLE_KEY, userRole);
+    enforceMaxDiscount();
+}
 
 function decodeJWT(token) {
     try {
@@ -1241,6 +1259,7 @@ function grantAccess(user) {
         email: user.email, name: user.name,
         given_name: user.given_name, picture: user.picture
     }));
+    fetchUserRole(user.email);
 }
 
 function handleCredentialResponse(response) {
@@ -1283,6 +1302,8 @@ function initGoogleAuth() {
 
 function skelloLogout() {
     sessionStorage.removeItem(SESSION_KEY);
+    sessionStorage.removeItem(ROLE_KEY);
+    userRole = 'sales';
     document.getElementById('auth-gate').classList.remove('hidden');
     document.getElementById('user-info').style.display = 'none';
     document.getElementById('auth-error').style.display = 'none';
