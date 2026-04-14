@@ -1236,7 +1236,8 @@ let dbRole = sessionStorage.getItem(DB_ROLE_KEY) || 'sales';
 const SUPABASE_URL = 'https://lhaxfzqbldjpevkrgvoh.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxoYXhmenFibGRqcGV2a3Jndm9oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxNjQyNDMsImV4cCI6MjA5MTc0MDI0M30.lN-D54T0JdEqdVC5PT1eiAHx91gs91ZFeftRvGoGlRc';
 let supabaseClient = null;
-try { supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e) { console.warn('Supabase init failed:', e); }
+console.log('[DEBUG] window.supabase:', typeof window.supabase);
+try { supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); console.log('[DEBUG] Supabase client OK'); } catch(e) { console.warn('[DEBUG] Supabase init failed:', e); }
 
 function applyRole() {
     const adminSwitch = document.getElementById('admin-view-switch');
@@ -1317,10 +1318,13 @@ function handleCredentialResponse(response) {
 }
 
 function initGoogleAuth() {
+    console.log('[DEBUG] initGoogleAuth called, google:', typeof google);
     if (typeof google === 'undefined' || !google.accounts) {
+        console.log('[DEBUG] Google not ready, retrying in 200ms');
         setTimeout(initGoogleAuth, 200);
         return;
     }
+    console.log('[DEBUG] Rendering Google button');
     google.accounts.id.initialize({
         client_id: GOOGLE_CLIENT_ID,
         callback: handleCredentialResponse,
@@ -1358,16 +1362,19 @@ function skelloLogout() {
 
 // ── Check session on page load ──
 (function checkSession() {
+    console.log('[DEBUG] checkSession started');
     const stored = sessionStorage.getItem(SESSION_KEY);
     if (stored) {
         try {
             const user = JSON.parse(stored);
             if (user && user.email && ALLOWED_DOMAINS.includes(user.email.split('@')[1])) {
+                console.log('[DEBUG] Session found, granting access for:', user.email);
                 grantAccess(user);
                 return;
             }
-        } catch (e) {}
+        } catch (e) { console.warn('[DEBUG] Session parse error:', e); }
     }
+    console.log('[DEBUG] No session, calling initGoogleAuth');
     initGoogleAuth();
 })();
 </script>
