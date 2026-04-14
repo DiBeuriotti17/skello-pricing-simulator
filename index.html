@@ -303,6 +303,9 @@
         .toggle-thumb { width: 16px; height: 16px; background: #fff; border-radius: 50%; position: absolute; top: 2px; left: 2px; transition: transform 0.25s; box-shadow: 0 1px 3px rgba(0,0,0,.15); }
         .secret-toggle input:checked + .toggle-track { background: var(--blue); }
         .secret-toggle input:checked + .toggle-track .toggle-thumb { transform: translateX(16px); }
+        .admin-view-switch { display: none; align-items: center; gap: 8px; background: rgba(46,38,242,.08); padding: 4px 12px; border-radius: 20px; }
+        .admin-view-switch.vis { display: flex; }
+        .view-label { font-size: 12px; font-weight: 700; color: var(--blue); min-width: 38px; text-align: center; }
 
         /* DISCOUNT INPUT IN RESULT CARD */
         .discount-input-row { display: none; align-items: center; gap: 12px; margin-bottom: 16px; }
@@ -493,6 +496,10 @@
             <button class="lang-btn" data-lang="it">IT</button>
         </div>
         <label class="secret-toggle" title="Réduction"><input type="checkbox" id="toggle-discount"><span class="toggle-track"><span class="toggle-thumb"></span></span></label>
+        <div class="admin-view-switch" id="admin-view-switch" style="display:none;">
+            <span class="view-label" id="view-label">Sales</span>
+            <label class="secret-toggle" title="Vue AS / Sales"><input type="checkbox" id="toggle-view"><span class="toggle-track"><span class="toggle-thumb"></span></span></label>
+        </div>
         <div class="user-info" id="user-info" style="display:none;">
             <img class="user-avatar" id="user-avatar" src="" alt="">
             <span class="user-name" id="user-name"></span>
@@ -1207,6 +1214,11 @@ document.getElementById('toggle-discount').addEventListener('change', function()
     }
 });
 
+// Admin view toggle (AS / Sales)
+document.getElementById('toggle-view').addEventListener('change', function() {
+    applyRole();
+});
+
 switchLang('fr');
 enforceMaxDiscount();
 
@@ -1217,11 +1229,29 @@ const GOOGLE_CLIENT_ID = '261796576867-800anci88p7h80srjqd3jhb6kmfar5g3.apps.goo
 const ALLOWED_DOMAINS = ['skello.io', 'skello.es'];
 const SESSION_KEY = 'skello_pricing_session';
 const ROLE_KEY = 'skello_user_role';
+const DB_ROLE_KEY = 'skello_db_role';
 let userRole = sessionStorage.getItem(ROLE_KEY) || 'sales';
+let dbRole = sessionStorage.getItem(DB_ROLE_KEY) || 'sales';
 
 const SUPABASE_URL = 'https://lhaxfzqbldjpevkrgvoh.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxoYXhmenFibGRqcGV2a3Jndm9oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxNjQyNDMsImV4cCI6MjA5MTc0MDI0M30.lN-D54T0JdEqdVC5PT1eiAHx91gs91ZFeftRvGoGlRc';
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+function applyRole() {
+    const adminSwitch = document.getElementById('admin-view-switch');
+    const viewLabel = document.getElementById('view-label');
+    const viewToggle = document.getElementById('toggle-view');
+    if (dbRole === 'admin') {
+        adminSwitch.classList.add('vis');
+        userRole = viewToggle.checked ? 'as' : 'sales';
+        viewLabel.textContent = viewToggle.checked ? 'AS' : 'Sales';
+    } else {
+        adminSwitch.classList.remove('vis');
+        userRole = dbRole;
+    }
+    sessionStorage.setItem(ROLE_KEY, userRole);
+    enforceMaxDiscount();
+}
 
 async function fetchUserRole(email) {
     try {
@@ -1230,12 +1260,12 @@ async function fetchUserRole(email) {
             .select('role')
             .eq('email', email.toLowerCase())
             .single();
-        userRole = (!error && data) ? data.role : 'sales';
+        dbRole = (!error && data) ? data.role : 'sales';
     } catch (e) {
-        userRole = 'sales';
+        dbRole = 'sales';
     }
-    sessionStorage.setItem(ROLE_KEY, userRole);
-    enforceMaxDiscount();
+    sessionStorage.setItem(DB_ROLE_KEY, dbRole);
+    applyRole();
 }
 
 function decodeJWT(token) {
@@ -1311,7 +1341,11 @@ function initGoogleAuth() {
 function skelloLogout() {
     sessionStorage.removeItem(SESSION_KEY);
     sessionStorage.removeItem(ROLE_KEY);
+    sessionStorage.removeItem(DB_ROLE_KEY);
     userRole = 'sales';
+    dbRole = 'sales';
+    document.getElementById('toggle-view').checked = false;
+    document.getElementById('admin-view-switch').classList.remove('vis');
     document.getElementById('auth-gate').classList.remove('hidden');
     document.getElementById('user-info').style.display = 'none';
     document.getElementById('auth-error').style.display = 'none';
