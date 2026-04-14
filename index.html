@@ -1370,6 +1370,7 @@ function skelloLogout() {
     if (typeof google !== 'undefined' && google.accounts) {
         google.accounts.id.disableAutoSelect();
     }
+    initGoogleAuth();
 }
 
 // ── Check session on page load ──
