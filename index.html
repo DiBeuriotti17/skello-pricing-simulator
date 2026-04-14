@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Skello - Simulateur de prix</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <style>
         /* ═══════════════════════════════════════════════
            SKELLO BRAND FONT — Gellix
@@ -1218,11 +1219,18 @@ const SESSION_KEY = 'skello_pricing_session';
 const ROLE_KEY = 'skello_user_role';
 let userRole = sessionStorage.getItem(ROLE_KEY) || 'sales';
 
+const SUPABASE_URL = 'https://lhaxfzqbldjpevkrgvoh.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxoYXhmenFibGRqcGV2a3Jndm9oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxNjQyNDMsImV4cCI6MjA5MTc0MDI0M30.lN-D54T0JdEqdVC5PT1eiAHx91gs91ZFeftRvGoGlRc';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
 async function fetchUserRole(email) {
     try {
-        const res = await fetch(`/api/check-role?email=${encodeURIComponent(email)}`);
-        const data = await res.json();
-        userRole = data.role || 'sales';
+        const { data, error } = await supabase
+            .from('users_roles')
+            .select('role')
+            .eq('email', email.toLowerCase())
+            .single();
+        userRole = (!error && data) ? data.role : 'sales';
     } catch (e) {
         userRole = 'sales';
     }
