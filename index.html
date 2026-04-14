@@ -1235,7 +1235,8 @@ let dbRole = sessionStorage.getItem(DB_ROLE_KEY) || 'sales';
 
 const SUPABASE_URL = 'https://lhaxfzqbldjpevkrgvoh.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxoYXhmenFibGRqcGV2a3Jndm9oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxNjQyNDMsImV4cCI6MjA5MTc0MDI0M30.lN-D54T0JdEqdVC5PT1eiAHx91gs91ZFeftRvGoGlRc';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let supabaseClient = null;
+try { supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e) { console.warn('Supabase init failed:', e); }
 
 function applyRole() {
     const adminSwitch = document.getElementById('admin-view-switch');
@@ -1254,8 +1255,9 @@ function applyRole() {
 }
 
 async function fetchUserRole(email) {
+    if (!supabaseClient) { dbRole = 'sales'; applyRole(); return; }
     try {
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
             .from('users_roles')
             .select('role')
             .eq('email', email.toLowerCase())
