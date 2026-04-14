@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Skello - Simulateur de prix</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <style>
         /* ═══════════════════════════════════════════════
            SKELLO BRAND FONT — Gellix
@@ -1236,8 +1235,15 @@ let dbRole = sessionStorage.getItem(DB_ROLE_KEY) || 'sales';
 const SUPABASE_URL = 'https://lhaxfzqbldjpevkrgvoh.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxoYXhmenFibGRqcGV2a3Jndm9oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxNjQyNDMsImV4cCI6MjA5MTc0MDI0M30.lN-D54T0JdEqdVC5PT1eiAHx91gs91ZFeftRvGoGlRc';
 let supabaseClient = null;
-console.log('[DEBUG] window.supabase:', typeof window.supabase);
-try { supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); console.log('[DEBUG] Supabase client OK'); } catch(e) { console.warn('[DEBUG] Supabase init failed:', e); }
+
+function getSupabase() {
+    if (supabaseClient) return supabaseClient;
+    if (window.supabase && window.supabase.createClient) {
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        console.log('[DEBUG] Supabase client initialized');
+    }
+    return supabaseClient;
+}
 
 function applyRole() {
     const adminSwitch = document.getElementById('admin-view-switch');
@@ -1256,9 +1262,14 @@ function applyRole() {
 }
 
 async function fetchUserRole(email) {
-    if (!supabaseClient) { dbRole = 'sales'; applyRole(); return; }
+    const sb = getSupabase();
+    if (!sb) {
+        console.log('[DEBUG] Supabase not loaded yet, retrying in 500ms');
+        setTimeout(() => fetchUserRole(email), 500);
+        return;
+    }
     try {
-        const { data, error } = await supabaseClient
+        const { data, error } = await sb
             .from('users_roles')
             .select('role')
             .eq('email', email.toLowerCase())
@@ -1378,6 +1389,7 @@ function skelloLogout() {
     initGoogleAuth();
 })();
 </script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" async defer></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 
 </body>
