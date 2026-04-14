@@ -636,6 +636,14 @@
 
 <script>
 // =============================================
+// ROLE STATE (must be declared before calculate)
+// =============================================
+const ROLE_KEY = 'skello_user_role';
+const DB_ROLE_KEY = 'skello_db_role';
+let userRole = sessionStorage.getItem(ROLE_KEY) || 'sales';
+let dbRole = sessionStorage.getItem(DB_ROLE_KEY) || 'sales';
+
+// =============================================
 // COMPLETE PRICING GRID FR (from official data)
 // =============================================
 const GRID_FR = [
@@ -1227,10 +1235,6 @@ enforceMaxDiscount();
 const GOOGLE_CLIENT_ID = '261796576867-800anci88p7h80srjqd3jhb6kmfar5g3.apps.googleusercontent.com';
 const ALLOWED_DOMAINS = ['skello.io', 'skello.es'];
 const SESSION_KEY = 'skello_pricing_session';
-const ROLE_KEY = 'skello_user_role';
-const DB_ROLE_KEY = 'skello_db_role';
-let userRole = sessionStorage.getItem(ROLE_KEY) || 'sales';
-let dbRole = sessionStorage.getItem(DB_ROLE_KEY) || 'sales';
 
 const SUPABASE_URL = 'https://lhaxfzqbldjpevkrgvoh.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxoYXhmenFibGRqcGV2a3Jndm9oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxNjQyNDMsImV4cCI6MjA5MTc0MDI0M30.lN-D54T0JdEqdVC5PT1eiAHx91gs91ZFeftRvGoGlRc';
