@@ -1227,6 +1227,8 @@ document.getElementById('toggle-view').addEventListener('change', function() {
 });
 
 switchLang('fr');
+// Restore admin toggle on page load if dbRole already in session
+if (dbRole === 'admin' || dbRole === 'as') { applyRole(); }
 enforceMaxDiscount();
 
 // =============================================
