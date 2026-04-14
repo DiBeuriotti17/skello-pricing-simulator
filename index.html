@@ -1383,6 +1383,7 @@ function skelloLogout() {
                 grantAccess(user);
                 return;
             }
+        } catch (e) {}
     }
     initGoogleAuth();
 })();
